@@ -102,14 +102,14 @@ class IndustrialImageFolder(ImageFolder):
 
 
 def run_training_pipeline(
-    epochs: int = 5,
+    epochs: int = 10,
     batch_size: int = 16,
     learning_rate: float = 1e-3,
 ) -> dict:
-    """Executa o pipeline completo de ponta a ponta."""
+    """Executa o pipeline completo de ponta a ponta com dados reais do DeepPCB."""
     settings = get_settings()
     configure_logging(log_level="INFO", json_format=False)
-    logger.info("Iniciando pipeline de MLOps Industrial", epochs=epochs, batch_size=batch_size, lr=learning_rate)
+    logger.info("Iniciando pipeline de MLOps Industrial (DeepPCB Real Data)", epochs=epochs, batch_size=batch_size, lr=learning_rate)
 
     raw_dir = Path("data/raw")
     train_dir = raw_dir / "train"
@@ -138,18 +138,21 @@ def run_training_pipeline(
         lr=learning_rate,
         weight_decay=1e-4,
     )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-5)
 
-    with mlflow.start_run(run_name="industrial_mobilenetv3_training") as run:
+    with mlflow.start_run(run_name="deeppcb_real_production") as run:
         run_id = run.info.run_id
-        logger.info("Executando MLflow Run", run_id=run_id)
+        logger.info("Executando MLflow Run (DeepPCB Real)", run_id=run_id)
 
         # Log de Parâmetros
         mlflow.log_params({
             "architecture": "MobileNetV3-Large",
+            "dataset_source": "DeepPCB-Real-Peking-University",
             "epochs": epochs,
             "batch_size": batch_size,
             "learning_rate": learning_rate,
             "optimizer": "AdamW",
+            "scheduler": "CosineAnnealingLR",
             "loss_function": "CrossEntropyLoss(label_smoothing=0.05)",
             "device": "cpu",
             "num_classes": len(CLASS_NAMES),
@@ -175,10 +178,12 @@ def run_training_pipeline(
                 correct += (preds == labels).sum().item()
                 total += labels.size(0)
 
+            scheduler.step()
             epoch_loss = running_loss / max(total, 1)
             epoch_acc = correct / max(total, 1)
             mlflow.log_metric("train_loss", epoch_loss, step=epoch)
             mlflow.log_metric("train_acc", epoch_acc, step=epoch)
+            mlflow.log_metric("learning_rate", scheduler.get_last_lr()[0], step=epoch)
             logger.info("Epoca concluida", epoch=epoch, loss=round(epoch_loss, 4), acc=round(epoch_acc, 4))
 
         # 4. Avaliação em Validação Out-of-Sample
@@ -299,4 +304,4 @@ def run_training_pipeline(
 
 
 if __name__ == "__main__":
-    run_training_pipeline(epochs=8, batch_size=16, learning_rate=1e-3)
+    run_training_pipeline(epochs=10, batch_size=16, learning_rate=1e-3)

@@ -22,6 +22,7 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+data/deeppcb_raw/
 data/telemetry/*
 !data/telemetry/.gitkeep
 
