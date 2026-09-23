@@ -233,7 +233,7 @@ def _run_core_inference(
     # 5. Grad-CAM Explicabilidade Visual
     try:
         heatmap = app_state.gradcam.generate_heatmap(input_tensor, class_idx=pred_idx)
-        overlay_pil = app_state.gradcam.overlay_on_image(pil_image, heatmap, alpha=0.45)
+        overlay_pil = app_state.gradcam.overlay_on_image(pil_image, heatmap, alpha=0.65, threshold=0.25)
         gradcam_base64 = GradCAM.pil_to_base64(overlay_pil, format="JPEG")
     except Exception as exc:
         logger.warning("Falha ao gerar Grad-CAM", error=str(exc))

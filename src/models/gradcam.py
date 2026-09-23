@@ -25,6 +25,10 @@ class GradCAM:
         self.activations: torch.Tensor | None = None
         self.gradients: torch.Tensor | None = None
 
+        # Garante que os gradientes fluam pela camada alvo mesmo com backbone congelado
+        for param in self.target_layer.parameters():
+            param.requires_grad = True
+
         # Hooks para captura de tensores intermediários
         self.target_layer.register_forward_hook(self._forward_hook)
         self.target_layer.register_full_backward_hook(self._backward_hook)
@@ -39,6 +43,10 @@ class GradCAM:
         """Gera a matriz 2D normalizada (0.0 a 1.0) do mapa térmico de ativação."""
         self.model.eval()
         self.model.zero_grad()
+
+        # Garante requires_grad ativo na camada alvo
+        for param in self.target_layer.parameters():
+            param.requires_grad = True
 
         logits = self.model(input_tensor)
         if class_idx is None:
@@ -74,11 +82,16 @@ class GradCAM:
         self,
         original_image: Image.Image,
         heatmap: np.ndarray,
-        alpha: float = 0.45,
+        alpha: float = 0.65,
+        threshold: float = 0.25,
         colormap: int = cv2.COLORMAP_JET,
     ) -> Image.Image:
-        """Sobrepõe o mapa térmico colorido na imagem original da PCB com transparência."""
-        # Redimensiona heatmap para o tamanho exato da imagem original
+        """Sobrepõe o mapa térmico colorido focado apenas nas áreas de ativação relevante.
+
+        Elimina o véu azul sobre toda a imagem aplicando máscara de limiar:
+        - Áreas sem anomalia (< threshold) preservam 100% da cor natural da PCB.
+        - Áreas com anomalia (>= threshold) são destacadas com calor intenso (amarelo/vermelho).
+        """
         w, h = original_image.size
         heatmap_resized = cv2.resize(heatmap, (w, h))
 
@@ -88,8 +101,13 @@ class GradCAM:
         colored_heatmap_rgb = cv2.cvtColor(colored_heatmap, cv2.COLOR_BGR2RGB)
 
         orig_arr = np.array(original_image.convert("RGB"))
-        # Alpha blending
-        overlay = cv2.addWeighted(orig_arr, 1.0 - alpha, colored_heatmap_rgb, alpha, 0)
+
+        # Máscara de transparência baseada no gradiente de ativação
+        norm_heatmap = np.clip((heatmap_resized - threshold) / (1.0 - threshold + 1e-6), 0.0, 1.0)
+        alpha_mask = (norm_heatmap * alpha)[:, :, np.newaxis]
+
+        # Composição suave: 100% original nas partes frias, realce térmico nas quentes
+        overlay = (orig_arr * (1.0 - alpha_mask) + colored_heatmap_rgb * alpha_mask).astype(np.uint8)
         return Image.fromarray(overlay)
 
     @staticmethod

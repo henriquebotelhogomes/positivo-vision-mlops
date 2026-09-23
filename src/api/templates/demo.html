@@ -34,12 +34,167 @@
         }
     </script>
     <style>
+        /* ==============================================================================
+           Self-Contained Offline Industrial Design System (Positivo Corporate)
+           Garante funcionamento 100% autônomo mesmo em redes fabris sem acesso ao CDN
+           ============================================================================== */
+        *, ::before, ::after { box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #F4F7FB; color: #1E293B; margin: 0; padding: 0; }
+        svg { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+        .w-3\.5 { width: 0.875rem; height: 0.875rem; }
+        .w-4 { width: 1rem; height: 1rem; }
+        .w-5 { width: 1.25rem; height: 1.25rem; }
+        .w-6 { width: 1.5rem; height: 1.5rem; }
+        .w-8 { width: 2rem; height: 2rem; }
+        .w-16 { width: 4rem; height: 4rem; }
+        .h-8 { height: 2rem; }
+        .h-18 { height: 4.5rem; }
+        .max-w-7xl { max-width: 80rem; margin-left: auto; margin-right: auto; }
+        .flex { display: flex; }
+        .grid { display: grid; }
+        .hidden { display: none !important; }
+        .flex-col { flex-direction: column; }
+        .flex-wrap { flex-wrap: wrap; }
+        .flex-1 { flex: 1 1 0%; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .gap-1 { gap: 0.25rem; }
+        .gap-1\.5 { gap: 0.375rem; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-2\.5 { gap: 0.625rem; }
+        .gap-3 { gap: 0.75rem; }
+        .gap-4 { gap: 1rem; }
+        .gap-6 { gap: 1.5rem; }
+        .space-x-2 > :not([hidden]) ~ :not([hidden]) { margin-left: 0.5rem; }
+        .space-x-3 > :not([hidden]) ~ :not([hidden]) { margin-left: 0.75rem; }
+        .space-x-4 > :not([hidden]) ~ :not([hidden]) { margin-left: 1rem; }
+        .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.25rem; }
+        .space-y-2\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.625rem; }
+        .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
+        .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+        .space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.25rem; }
+        .bg-white { background-color: #ffffff; }
+        .bg-slate-50 { background-color: #F8FAFC; }
+        .bg-slate-100 { background-color: #F1F5F9; }
+        .bg-slate-200 { background-color: #E2E8F0; }
+        .bg-positivo-blue { background-color: #0072CE; }
+        .bg-positivo-dark { background-color: #005FA8; }
+        .bg-positivo-navy { background-color: #002F6C; }
+        .bg-emerald-50 { background-color: #ECFDF5; }
+        .bg-emerald-500 { background-color: #10B981; }
+        .bg-emerald-600 { background-color: #059669; }
+        .bg-rose-50 { background-color: #FFF1F2; }
+        .bg-rose-600 { background-color: #E11D48; }
+        .bg-amber-50 { background-color: #FFFBEB; }
+        .bg-amber-500 { background-color: #F59E0B; }
+        .text-white { color: #ffffff; }
+        .text-slate-400 { color: #94A3B8; }
+        .text-slate-500 { color: #64748B; }
+        .text-slate-600 { color: #475569; }
+        .text-slate-700 { color: #334155; }
+        .text-slate-800 { color: #1E293B; }
+        .text-slate-900 { color: #0F172A; }
+        .text-positivo-blue { color: #0072CE; }
+        .text-positivo-navy { color: #002F6C; }
+        .text-positivo-cyan { color: #00A3E0; }
+        .text-emerald-700 { color: #047857; }
+        .text-emerald-800 { color: #065F46; }
+        .text-emerald-900 { color: #064E3B; }
+        .text-rose-600 { color: #E11D48; }
+        .text-rose-700 { color: #BE123C; }
+        .text-rose-800 { color: #9F1239; }
+        .text-rose-900 { color: #881337; }
+        .text-amber-700 { color: #B45309; }
+        .text-amber-900 { color: #78350F; }
+        .border { border: 1px solid #DCE4EC; }
+        .border-b { border-bottom: 1px solid #DCE4EC; }
+        .border-t { border-top: 1px solid #DCE4EC; }
+        .border-slate-100 { border-color: #F1F5F9; }
+        .border-slate-200 { border-color: #E2E8F0; }
+        .border-slate-300 { border-color: #CBD5E1; }
+        .border-positivo-border { border-color: #DCE4EC; }
+        .border-emerald-300 { border-color: #6EE7B7; }
+        .border-rose-300 { border-color: #FDA4AF; }
+        .border-amber-300 { border-color: #FCD34D; }
+        .border-l-4 { border-left-width: 4px; border-left-style: solid; }
+        .border-l-emerald-600 { border-left-color: #059669; }
+        .border-l-rose-600 { border-left-color: #E11D48; }
+        .border-l-amber-500 { border-left-color: #F59E0B; }
+        .rounded-md { border-radius: 0.375rem; }
+        .rounded-lg { border-radius: 0.5rem; }
+        .rounded-xl { border-radius: 0.75rem; }
+        .rounded-2xl { border-radius: 1rem; }
+        .rounded-full { border-radius: 9999px; }
+        .shadow-xs { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+        .shadow-sm { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
+        .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .fixed { position: fixed; }
+        .inset-0 { inset: 0px; }
+        .z-0 { z-index: 0; }
+        .z-10 { z-index: 10; }
+        .z-20 { z-index: 20; }
+        .z-30 { z-index: 30; }
+        .z-40 { z-index: 40; }
+        .z-50 { z-index: 50; }
+        .overflow-hidden { overflow: hidden; }
+        .overflow-y-auto { overflow-y: auto; }
+        .w-full { width: 100%; }
+        .h-full { height: 100%; }
+        .p-2 { padding: 0.5rem; }
+        .p-2\.5 { padding: 0.625rem; }
+        .p-3 { padding: 0.75rem; }
+        .p-3\.5 { padding: 0.875rem; }
+        .p-4 { padding: 1rem; }
+        .p-5 { padding: 1.25rem; }
+        .p-6 { padding: 1.5rem; }
+        .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+        .px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+        .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+        .px-3\.5 { padding-left: 0.875rem; padding-right: 0.875rem; }
+        .px-4 { padding-left: 1rem; padding-right: 1rem; }
+        .py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+        .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+        .py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+        .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+        .py-2\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+        .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .py-3\.5 { padding-top: 0.875rem; padding-bottom: 0.875rem; }
+        .text-xs { font-size: 0.75rem; line-height: 1rem; }
+        .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+        .text-base { font-size: 1rem; line-height: 1.5rem; }
+        .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+        .font-extrabold { font-weight: 800; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .tracking-tight { letter-spacing: -0.025em; }
+        .tracking-wide { letter-spacing: 0.025em; }
+        .tracking-wider { letter-spacing: 0.05em; }
+        .uppercase { text-transform: uppercase; }
+        .text-center { text-align: center; }
+        .cursor-pointer { cursor: pointer; }
+        .select-none { user-select: none; }
+        button { cursor: pointer; border: none; font-family: inherit; }
+        button:disabled { cursor: not-allowed; opacity: 0.6; }
+        @media (min-width: 1024px) {
+            .lg\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+            .lg\:col-span-5 { grid-column: span 5 / span 5; }
+            .lg\:col-span-7 { grid-column: span 7 / span 7; }
+            .lg\:px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+        }
+
         /* Retículo industrial de câmera */
         .industrial-grid {
             background-size: 32px 32px;
             background-image: 
-                linear-gradient(to right, rgba(0, 114, 206, 0.05) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(0, 114, 206, 0.05) 1px, transparent 1px);
+                linear-gradient(to right, rgba(0, 114, 206, 0.06) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 114, 206, 0.06) 1px, transparent 1px);
         }
     </style>
 </head>
@@ -245,30 +400,72 @@
                     <span id="currentViewMode" class="text-xs font-mono font-bold text-positivo-blue">VISÃO: GRAD-CAM ATIVO (XAI)</span>
                 </div>
 
+                <!-- Barra de Ferramentas de Inspeção Óptica da Câmera (AOI Toolbar) -->
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 mb-2 flex flex-wrap items-center justify-between gap-2.5 text-xs shadow-xs">
+                    <!-- Controles de Zoom -->
+                    <div class="flex items-center gap-1">
+                        <span class="text-slate-500 font-semibold text-[11px] mr-1">Zoom:</span>
+                        <button onclick="changeZoom(-0.25)" class="w-6.5 h-6.5 px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold transition flex items-center justify-center shadow-xs" title="Reduzir Zoom">-</button>
+                        <span id="zoomLevelDisplay" class="font-mono text-[11px] font-bold text-slate-700 w-11 text-center bg-white py-0.5 px-1 rounded border border-slate-200">1.0x</span>
+                        <button onclick="changeZoom(+0.25)" class="w-6.5 h-6.5 px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold transition flex items-center justify-center shadow-xs" title="Aumentar Zoom">+</button>
+                        <button onclick="resetImageTransform()" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-300 text-slate-600 text-[11px] font-medium transition ml-0.5" title="Redefinir Zoom e Posição">Ajustar</button>
+                    </div>
+
+                    <!-- Rotação 90° -->
+                    <div class="flex items-center gap-1">
+                        <span class="text-slate-500 font-semibold text-[11px] mr-1">Girar:</span>
+                        <button onclick="rotateImage()" class="px-2.5 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-medium transition flex items-center gap-1 shadow-xs" title="Rotacionar 90 graus no sentido horário">
+                            <span class="text-positivo-blue font-bold">↷</span>
+                            <span id="rotationDisplay" class="font-mono text-[11px]">0°</span>
+                        </button>
+                    </div>
+
+                    <!-- Filtros Ópticos Industriais -->
+                    <div class="flex items-center gap-1">
+                        <span class="text-slate-500 font-semibold text-[11px] mr-1">Filtro Óptico:</span>
+                        <select id="selectFilter" onchange="applyImageFilter(this.value)" class="bg-white border border-slate-300 rounded px-2 py-0.5 text-slate-700 text-xs font-medium focus:ring-1 focus:ring-positivo-blue focus:outline-none shadow-xs">
+                            <option value="none">☀️ Cores Naturais (Padrão)</option>
+                            <option value="high-contrast">◐ Alto Contraste (Realce de Solda)</option>
+                            <option value="trace-boost">🔍 Realce de Trilhas de Cobre</option>
+                            <option value="xray">⚡ Raio-X / Inversão Negativa</option>
+                            <option value="grayscale">🎯 Monocromático de Precisão</option>
+                        </select>
+                    </div>
+
+                    <!-- Botão Exportar Snapshot -->
+                    <button onclick="downloadInspectedImage()" class="px-2.5 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-medium transition flex items-center gap-1 shadow-xs ml-auto" title="Exportar Imagem Inspecionada">
+                        <svg class="w-3.5 h-3.5 text-positivo-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        <span>Exportar</span>
+                    </button>
+                </div>
+
                 <!-- Industrial Inspection Viewport Canvas -->
-                <div class="relative flex-1 min-h-[480px] bg-slate-100/80 rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center p-3 industrial-grid group">
+                <div id="viewportContainer" class="relative flex-1 min-h-[480px] bg-slate-100/80 rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center p-3 industrial-grid group select-none cursor-default">
                     
                     <!-- HUD da Câmera Industrial (Metadados Ópticos em Tempo Real - Sem Sobreposição) -->
-                    <div class="absolute top-2.5 left-3 text-[10px] font-mono text-slate-500 bg-white/90 px-2 py-0.5 rounded border border-slate-200 shadow-xs">
-                        ÓPTICA: 1024x1024 px • SENSOR CCD • ZOOM 1.0x
+                    <div class="absolute top-2.5 left-3 text-[10px] font-mono text-slate-500 bg-white/90 px-2 py-0.5 rounded border border-slate-200 shadow-xs z-20">
+                        ÓPTICA: 1024x1024 px • SENSOR CCD • ZOOM <span id="hudZoom">1.0x</span>
                     </div>
-                    <div class="absolute bottom-2.5 left-3 text-[10px] font-mono text-slate-500 bg-white/90 px-2 py-0.5 rounded border border-slate-200 shadow-xs">
+                    <div class="absolute bottom-2.5 left-3 text-[10px] font-mono text-slate-500 bg-white/90 px-2 py-0.5 rounded border border-slate-200 shadow-xs z-20">
                         COORDENADA: X: 142.5mm | Y: 88.2mm | Z: 12.0mm
                     </div>
-                    <div class="absolute bottom-2.5 right-3 text-[10px] font-mono text-slate-500 bg-white/90 px-2 py-0.5 rounded border border-slate-200 shadow-xs">
+                    <div class="absolute bottom-2.5 right-3 text-[10px] font-mono text-slate-500 bg-white/90 px-2 py-0.5 rounded border border-slate-200 shadow-xs z-20">
                         FPS: 60 • ESTAÇÃO: AOI-SMT-03
                     </div>
 
                     <!-- Retículo / Mira óptica de precisão -->
-                    <div class="absolute inset-0 pointer-events-none opacity-25 flex items-center justify-center">
+                    <div class="absolute inset-0 pointer-events-none opacity-25 flex items-center justify-center z-0">
                         <div class="w-full h-px bg-positivo-blue"></div>
                         <div class="h-full w-px bg-positivo-blue absolute"></div>
                         <div class="w-72 h-72 border border-positivo-blue/40 rounded-full absolute"></div>
                         <div class="w-24 h-24 border border-positivo-blue/60 rounded-full absolute"></div>
                     </div>
 
-                    <!-- Target Image Elements (420x420 de Alta Resolução e Presença) -->
-                    <img id="imgDisplay" src="" alt="PCB Inspecionada" class="w-[420px] h-[420px] max-w-full object-cover rounded-xl shadow-lg border-2 border-slate-300 bg-white transition duration-200 hidden z-10">
+                    <!-- Wrapper com suporte a Zoom, Pan e Rotação -->
+                    <div id="transformWrapper" class="transition-transform duration-100 ease-out origin-center flex items-center justify-center z-10">
+                        <!-- Target Image Elements (420x420 de Alta Resolução e Presença) -->
+                        <img id="imgDisplay" src="" alt="PCB Inspecionada" class="w-[420px] h-[420px] max-w-full object-cover rounded-xl shadow-lg border-2 border-slate-300 bg-white transition duration-200 hidden select-none pointer-events-none">
+                    </div>
                     
                     <!-- Empty State Placeholder -->
                     <div id="imgPlaceholder" class="text-center p-8 z-10">
@@ -280,7 +477,7 @@
                     </div>
 
                     <!-- Anomaly Quarantine Badge (Posicionado no Top-Right sem nenhum texto por baixo) -->
-                    <div id="quarantineBadge" class="absolute top-2.5 right-3 hidden px-3.5 py-1.5 rounded-md bg-amber-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1.5">
+                    <div id="quarantineBadge" class="absolute top-2.5 right-3 hidden px-3.5 py-1.5 rounded-md bg-amber-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-md z-30 flex items-center gap-1.5">
                         <span>⚠️</span>
                         <span>Quarentena SMT: Anomalia Inédita</span>
                     </div>
@@ -346,6 +543,101 @@
         let currentPrediction = null;
         let currentConfidence = 0.0;
         let currentIsUnknown = false;
+
+        // Estado da Manipulação Óptica (Zoom, Rotação, Pan)
+        let currentZoom = 1.0;
+        let currentRotation = 0;
+        let currentPanX = 0;
+        let currentPanY = 0;
+        let isDragging = false;
+        let startDragX = 0;
+        let startDragY = 0;
+
+        function updateTransform() {
+            const wrapper = document.getElementById('transformWrapper');
+            if (!wrapper) return;
+            wrapper.style.transform = `translate(${currentPanX}px, ${currentPanY}px) scale(${currentZoom}) rotate(${currentRotation}deg)`;
+            
+            const zoomTxt = currentZoom.toFixed(1) + 'x';
+            const zoomEl = document.getElementById('zoomLevelDisplay');
+            const hudZoomEl = document.getElementById('hudZoom');
+            const rotEl = document.getElementById('rotationDisplay');
+            
+            if (zoomEl) zoomEl.innerText = zoomTxt;
+            if (hudZoomEl) hudZoomEl.innerText = zoomTxt;
+            if (rotEl) rotEl.innerText = currentRotation + '°';
+
+            const container = document.getElementById('viewportContainer');
+            if (container) {
+                container.style.cursor = currentZoom > 1.0 ? (isDragging ? 'grabbing' : 'grab') : 'default';
+            }
+        }
+
+        function changeZoom(delta) {
+            currentZoom = Math.min(3.5, Math.max(0.6, Math.round((currentZoom + delta) * 100) / 100));
+            if (currentZoom <= 1.0) {
+                currentPanX = 0;
+                currentPanY = 0;
+            }
+            updateTransform();
+        }
+
+        function rotateImage() {
+            currentRotation = (currentRotation + 90) % 360;
+            updateTransform();
+        }
+
+        function resetImageTransform() {
+            currentZoom = 1.0;
+            currentRotation = 0;
+            currentPanX = 0;
+            currentPanY = 0;
+            const filterEl = document.getElementById('selectFilter');
+            if (filterEl) filterEl.value = 'none';
+            applyImageFilter('none');
+            updateTransform();
+        }
+
+        function applyImageFilter(filterType) {
+            const img = document.getElementById('imgDisplay');
+            if (!img) return;
+            const filterMap = {
+                'none': 'none',
+                'high-contrast': 'contrast(185%) brightness(105%) saturate(120%)',
+                'trace-boost': 'contrast(150%) saturate(230%) brightness(95%)',
+                'xray': 'invert(100%) hue-rotate(180deg) contrast(140%)',
+                'grayscale': 'grayscale(100%) contrast(160%)',
+            };
+            img.style.filter = filterMap[filterType] || 'none';
+        }
+
+        function downloadInspectedImage() {
+            const img = document.getElementById('imgDisplay');
+            if (!img || !img.src || img.classList.contains('hidden')) {
+                alert('Nenhuma imagem na esteira para exportar.');
+                return;
+            }
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const tempImg = new Image();
+            tempImg.crossOrigin = 'anonymous';
+            tempImg.onload = function() {
+                canvas.width = tempImg.naturalWidth || 420;
+                canvas.height = tempImg.naturalHeight || 420;
+                
+                ctx.filter = img.style.filter || 'none';
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate((currentRotation * Math.PI) / 180);
+                ctx.drawImage(tempImg, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+                
+                const a = document.createElement('a');
+                a.download = `positivo_inspecao_${currentInferenceId || 'amostra'}.png`;
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            };
+            tempImg.src = img.src;
+        }
 
         async function updateTelemetryStats() {
             try {
@@ -626,9 +918,42 @@
             }
         }
 
-        // Inicializa contadores ao carregar a página
+        // Inicializa contadores e listeners ao carregar a página
         window.addEventListener('DOMContentLoaded', () => {
             updateTelemetryStats();
+
+            // Listeners de Pan / Arraste quando houver zoom
+            const container = document.getElementById('viewportContainer');
+            if (container) {
+                container.addEventListener('mousedown', (e) => {
+                    if (currentZoom <= 1.0) return;
+                    isDragging = true;
+                    startDragX = e.clientX - currentPanX;
+                    startDragY = e.clientY - currentPanY;
+                    container.style.cursor = 'grabbing';
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    currentPanX = e.clientX - startDragX;
+                    currentPanY = e.clientY - startDragY;
+                    updateTransform();
+                });
+
+                window.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        if (container) container.style.cursor = currentZoom > 1.0 ? 'grab' : 'default';
+                    }
+                });
+
+                // Zoom suave com roda do mouse sobre o visor
+                container.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY < 0 ? 0.2 : -0.2;
+                    changeZoom(delta);
+                }, { passive: false });
+            }
         });
     </script>
 </body>
