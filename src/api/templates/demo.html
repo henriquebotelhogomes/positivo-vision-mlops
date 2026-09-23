@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Positivo Vision MLOps — Inspeção Visual SMT & Governança</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            900: '#0c4a6e',
+                        },
+                        pcb: {
+                            dark: '#08140e',
+                            green: '#0e2e1d',
+                            trace: '#b8860b',
+                            alert: '#ef4444',
+                            pass: '#10b981',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-glow-pass { box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.4); }
+        .custom-glow-defect { box-shadow: 0 0 25px -5px rgba(239, 68, 68, 0.5); }
+        .custom-glow-unknown { box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.5); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-600 to-emerald-500 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-900/40">
+                    PV
+                </div>
+                <div>
+                    <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-2">
+                        Positivo Vision MLOps
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 font-mono font-medium">TIER 2</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Inspeção Visual Automatizada de PCBs & Hardware (POSI3)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3 text-xs">
+                <!-- Quota Badge -->
+                <div id="quotaBadge" class="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300 font-mono">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="quotaText">Sessão: 25/25 testes</span>
+                </div>
+
+                <!-- Champion Model Badge -->
+                <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-800 text-emerald-300 font-mono">
+                    <span>👑 @champion</span>
+                    <span class="text-slate-400">|</span>
+                    <span class="text-cyan-400">ONNX Edge</span>
+                </div>
+
+                <!-- Scalar Docs Link -->
+                <a href="/docs" target="_blank" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition font-medium">
+                    Scalar API Docs ↗
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Industrial Controls & Diagnostics (5 Cols) -->
+        <div class="lg:col-span-5 flex flex-col space-y-5">
+
+            <!-- Control Card -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl">
+                <h2 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Painel da Esteira SMT
+                </h2>
+
+                <div class="space-y-3">
+                    <!-- Primary 1-Click Action -->
+                    <button id="btnRandom" onclick="triggerRandomInspection()" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-bold text-sm shadow-lg shadow-cyan-950/60 active:scale-[0.98] transition flex items-center justify-center gap-2.5">
+                        <span class="text-lg">🎲</span>
+                        <span>Disparar Câmera na Esteira (1-Clique)</span>
+                    </button>
+
+                    <!-- Manual File Upload -->
+                    <div class="flex items-center gap-2">
+                        <input type="file" id="fileUpload" accept="image/*" class="hidden" onchange="handleManualUpload(event)">
+                        <button onclick="document.getElementById('fileUpload').click()" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-slate-200 text-xs font-semibold transition flex items-center justify-center gap-2">
+                            <span>📁 Fazer Upload de Imagem de Bancada</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- XAI Toggle Switch -->
+                <div class="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-200">Explicabilidade Visual (XAI)</p>
+                        <p class="text-[11px] text-slate-400">Sobreposição do Mapa de Calor Grad-CAM</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggleGradCam" onchange="toggleGradCamView()" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Diagnosis Status Card -->
+            <div id="statusCard" class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl transition-all">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-mono uppercase text-slate-400 tracking-wider">Resultado da Inspeção</span>
+                    <span id="latencyBadge" class="text-xs font-mono font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                        ⚡ -- ms
+                    </span>
+                </div>
+
+                <!-- Big Badge Verdict -->
+                <div id="verdictBanner" class="p-4 rounded-xl border border-slate-800 bg-slate-950/60 text-center mb-4 transition-all">
+                    <p id="verdictTitle" class="text-lg font-extrabold tracking-tight text-slate-400">
+                        Aguardando disparo da câmera...
+                    </p>
+                    <p id="verdictSubtitle" class="text-xs text-slate-500 mt-1">
+                        Selecione uma amostra aleatória ou faça o upload
+                    </p>
+                </div>
+
+                <!-- Probability Bars -->
+                <div class="space-y-2.5" id="probBarsContainer">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- OOD Screening Indicators -->
+                <div class="mt-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2 text-xs font-mono text-slate-400">
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-950/40 border border-slate-800/80">
+                        <span>Foco / Blur:</span>
+                        <span id="blurIndicator" class="font-bold text-slate-300">--</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-slate-950/40 border border-slate-800/80">
+                        <span>Luminância:</span>
+                        <span id="lumiIndicator" class="font-bold text-slate-300">--</span>
+                    </div>
+                </div>
+
+                <!-- GenAI RCA Button & HITL Section -->
+                <div class="mt-5 pt-4 border-t border-slate-800 space-y-3">
+                    <button id="btnGenAI" onclick="requestTechnicalReport()" disabled class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white font-semibold text-xs transition shadow-md flex items-center justify-center gap-2">
+                        <span>📄</span>
+                        <span>Gerar Laudo de Causa-Raiz (DeepSeek V4.1)</span>
+                    </button>
+
+                    <!-- Human-in-the-Loop Feedback -->
+                    <div id="hitlContainer" class="hidden p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                        <p class="text-[11px] font-semibold text-slate-300 mb-2">Validação do Operador (Active Learning):</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="sendHitlFeedback(true)" class="py-1.5 px-3 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-medium transition flex items-center justify-center gap-1.5">
+                                <span>✅</span> <span>Confirmar</span>
+                            </button>
+                            <button onclick="sendHitlFeedback(false)" class="py-1.5 px-3 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-medium transition flex items-center justify-center gap-1.5">
+                                <span>✏️</span> <span>Falso Positivo</span>
+                            </button>
+                        </div>
+                        <p id="hitlAck" class="text-[10px] text-emerald-400 mt-2 text-center hidden"></p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Visual Frame of the Inspected PCB (7 Cols) -->
+        <div class="lg:col-span-7 flex flex-col space-y-4">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-5 shadow-xl flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></div>
+                        <span class="text-xs font-mono uppercase text-slate-300 tracking-wider">Câmera de Esteira SMT — Linha #3</span>
+                    </div>
+                    <span id="currentViewMode" class="text-xs font-mono text-cyan-400 font-medium">VISÃO: GRAD-CAM ATIVO</span>
+                </div>
+
+                <!-- Image Canvas Container -->
+                <div class="relative flex-1 min-h-[380px] bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex items-center justify-center p-2 group">
+                    <!-- Crosshair Overlay -->
+                    <div class="absolute inset-0 pointer-events-none opacity-20 flex items-center justify-center">
+                        <div class="w-full h-px bg-cyan-400"></div>
+                        <div class="h-full w-px bg-cyan-400 absolute"></div>
+                    </div>
+
+                    <!-- Target Image Elements -->
+                    <img id="imgDisplay" src="" alt="PCB Inspecionada" class="max-h-[480px] max-w-full object-contain rounded-lg shadow-2xl transition duration-300 hidden">
+                    
+                    <!-- Placeholder when empty -->
+                    <div id="imgPlaceholder" class="text-center p-8">
+                        <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 text-2xl">
+                            📷
+                        </div>
+                        <p class="text-sm font-medium text-slate-400">Nenhuma imagem carregada na esteira</p>
+                        <p class="text-xs text-slate-600 mt-1">Clique em "Disparar Câmera" para iniciar o ciclo de inspeção</p>
+                    </div>
+
+                    <!-- Anomaly Quarantine Badge -->
+                    <div id="quarantineBadge" class="absolute top-4 right-4 hidden px-3 py-1.5 rounded-lg bg-amber-500/90 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg animate-bounce">
+                        ⚠️ Quarentena SMT: Anomalia Inédita
+                    </div>
+                </div>
+
+                <!-- Footer details of the image -->
+                <div class="mt-3 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                    <span id="lblInferenceId">ID: --</span>
+                    <span id="lblModelEngine">Engine: ONNX Runtime (CPU)</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Telemetry Bar -->
+    <footer class="border-t border-slate-800 bg-slate-900/90 py-3">
+        <div class="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-between gap-4 text-xs font-mono text-slate-400">
+            <div class="flex items-center gap-6">
+                <div><span>Total Inspecionado: </span><strong id="statTotal" class="text-slate-200">0</strong></div>
+                <div><span>Taxa de Defeito: </span><strong id="statDefectRate" class="text-rose-400">0.0%</strong></div>
+                <div><span>Latência p95: </span><strong id="statP95" class="text-cyan-400">-- ms</strong></div>
+                <div><span>Validações Humanas: </span><strong id="statHitl" class="text-emerald-400">0</strong></div>
+            </div>
+            <div class="text-slate-500 text-[11px]">
+                Positivo Tecnologia • Manufatura Curitiba & Manaus • Governança MLflow
+            </div>
+        </div>
+    </footer>
+
+    <!-- Multimodal Technical Report Modal (GenAI) -->
+    <div id="modalReport" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🤖</span>
+                    <h3 class="text-base font-bold text-white">Laudo Técnico SMT (Causa-Raiz)</h3>
+                </div>
+                <button onclick="closeReportModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 text-sm font-sans text-slate-300 leading-relaxed" id="reportContent">
+                <!-- Populated via Markdown -->
+            </div>
+            <div class="p-4 border-t border-slate-800 bg-slate-950/40 flex justify-between items-center text-xs">
+                <span id="reportSourceBadge" class="text-slate-500 font-mono">Fonte: DeepSeek V4.1 Flash (OpenCode Go)</span>
+                <button onclick="closeReportModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium transition">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        let currentOriginalBase64 = null;
+        let currentGradCamBase64 = null;
+        let currentInferenceId = null;
+        let currentPrediction = null;
+        let currentConfidence = 0.0;
+        let currentIsUnknown = false;
+
+        async function updateTelemetryStats() {
+            try {
+                const res = await fetch('/api/v1/telemetry/stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('statTotal').innerText = data.total_inspections;
+                    document.getElementById('statDefectRate').innerText = data.defect_rate_pct + '%';
+                    document.getElementById('statP95').innerText = data.latency_p95_ms + ' ms';
+                    document.getElementById('statHitl').innerText = data.operator_agreements_count;
+                }
+            } catch (err) {
+                console.warn('Erro ao atualizar telemetria:', err);
+            }
+        }
+
+        async function triggerRandomInspection() {
+            setLoadingState(true);
+            try {
+                const res = await fetch('/api/v1/predict-random');
+                if (res.status === 429) {
+                    const err = await res.json();
+                    alert(err.detail.message || 'Limite de testes atingido (25 requisições a cada 2h).');
+                    return;
+                }
+                const data = await res.json();
+                renderInspectionResult(data);
+                updateTelemetryStats();
+            } catch (err) {
+                alert('Erro ao conectar ao microsserviço de inferência.');
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        async function handleManualUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            setLoadingState(true);
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/v1/predict', {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (res.status === 429) {
+                    const err = await res.json();
+                    alert(err.detail.message || 'Limite de testes atingido (25 requisições a cada 2h).');
+                    return;
+                }
+                const data = await res.json();
+                
+                // Lê arquivo original como Base64 para visualização dual
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    data.original_image_base64 = e.target.result;
+                    renderInspectionResult(data);
+                    updateTelemetryStats();
+                };
+                reader.readAsDataURL(file);
+            } catch (err) {
+                alert('Erro ao processar imagem de upload.');
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        function renderInspectionResult(data) {
+            currentInferenceId = data.inference_id;
+            currentPrediction = data.prediction;
+            currentConfidence = data.confidence;
+            currentIsUnknown = data.is_unknown_anomaly;
+            currentOriginalBase64 = data.original_image_base64;
+            currentGradCamBase64 = data.gradcam_base64;
+
+            // Ativa elementos
+            document.getElementById('imgPlaceholder').classList.add('hidden');
+            const imgDisplay = document.getElementById('imgDisplay');
+            imgDisplay.classList.remove('hidden');
+
+            // Renderiza com toggle
+            toggleGradCamView();
+
+            // Metadados no rodapé da imagem
+            document.getElementById('lblInferenceId').innerText = 'ID: ' + data.inference_id;
+            document.getElementById('lblModelEngine').innerText = 'Engine: ' + data.engine + ' (' + data.model_alias + ')';
+            document.getElementById('latencyBadge').innerText = '⚡ ' + data.inference_time_ms + ' ms';
+
+            // Banner de Veredito
+            const banner = document.getElementById('verdictBanner');
+            const title = document.getElementById('verdictTitle');
+            const subtitle = document.getElementById('verdictSubtitle');
+            const qBadge = document.getElementById('quarantineBadge');
+
+            banner.className = 'p-4 rounded-xl text-center mb-4 transition-all ';
+            qBadge.classList.add('hidden');
+
+            if (data.is_unknown_anomaly) {
+                banner.classList.add('bg-amber-950/50', 'border', 'border-amber-600', 'custom-glow-unknown');
+                title.innerText = '⚠️ ANOMALIA INÉDITA DETECTADA';
+                title.className = 'text-lg font-black text-amber-400 tracking-tight';
+                subtitle.innerText = 'Defeito fora de catálogo (Distância Latente: ' + data.anomaly_score + ')';
+                qBadge.classList.remove('hidden');
+            } else if (data.is_defective) {
+                banner.classList.add('bg-rose-950/50', 'border', 'border-rose-600', 'custom-glow-defect');
+                title.innerText = 'REPROVADA: ' + formatClassName(data.prediction);
+                title.className = 'text-lg font-black text-rose-400 tracking-tight';
+                subtitle.innerText = 'Confiança de ' + (data.confidence * 100).toFixed(1) + '% no diagnóstico de não-conformidade';
+            } else {
+                banner.classList.add('bg-emerald-950/50', 'border', 'border-emerald-600', 'custom-glow-pass');
+                title.innerText = 'APROVADA: CONFORME (PASS)';
+                title.className = 'text-lg font-black text-emerald-400 tracking-tight';
+                subtitle.innerText = 'Integridade estrutural validada na esteira de montagem';
+            }
+
+            // Barras de Probabilidade
+            renderProbabilities(data.probabilities, data.prediction);
+
+            // Triagem OOD
+            const blurSpan = document.getElementById('blurIndicator');
+            blurSpan.innerText = data.ood_flags.is_blurred ? 'DESFOCADA' : 'NÍTIDA (' + data.ood_flags.laplacian_variance + ')';
+            blurSpan.className = data.ood_flags.is_blurred ? 'font-bold text-rose-400' : 'font-bold text-emerald-400';
+
+            const lumiSpan = document.getElementById('lumiIndicator');
+            lumiSpan.innerText = data.ood_flags.luminance_ok ? 'ADEQUADA (' + data.ood_flags.mean_luminance + ')' : 'FORA DE FAIXA';
+            lumiSpan.className = data.ood_flags.luminance_ok ? 'font-bold text-emerald-400' : 'font-bold text-rose-400';
+
+            // Habilita Botões
+            document.getElementById('btnGenAI').disabled = false;
+            document.getElementById('hitlContainer').classList.remove('hidden');
+            document.getElementById('hitlAck').classList.add('hidden');
+        }
+
+        function toggleGradCamView() {
+            const isChecked = document.getElementById('toggleGradCam').checked;
+            const imgDisplay = document.getElementById('imgDisplay');
+            const viewLabel = document.getElementById('currentViewMode');
+
+            if (isChecked && currentGradCamBase64) {
+                imgDisplay.src = currentGradCamBase64;
+                viewLabel.innerText = 'VISÃO: GRAD-CAM ATIVO (XAI)';
+                viewLabel.className = 'text-xs font-mono text-cyan-400 font-bold';
+            } else if (currentOriginalBase64) {
+                imgDisplay.src = currentOriginalBase64;
+                viewLabel.innerText = 'VISÃO: IMAGEM ORIGINAL DA PCB';
+                viewLabel.className = 'text-xs font-mono text-slate-400 font-medium';
+            }
+        }
+
+        function formatClassName(name) {
+            const map = {
+                'NORMAL': 'CONFORME (SEM DEFEITO)',
+                'DEFECT_SHORT': 'CURTO-CIRCUITO DE SOLDA',
+                'DEFECT_OPEN': 'TRILHA ROMPIDA / ABERTO',
+                'DEFECT_MISSING_HOLE': 'FURO DE VIA AUSENTE',
+                'DEFECT_SPURIOUS': 'COBRE ESPÚRIO / REBARBA',
+            };
+            return map[name] || name;
+        }
+
+        function renderProbabilities(probs, topClass) {
+            const container = document.getElementById('probBarsContainer');
+            container.innerHTML = '';
+
+            for (const [cls, val] of Object.entries(probs)) {
+                const pct = (val * 100).toFixed(1);
+                const isWinner = (cls === topClass);
+                const barColor = (cls === 'NORMAL') ? 'bg-emerald-500' : 'bg-rose-500';
+
+                const row = document.createElement('div');
+                row.className = 'space-y-1';
+                row.innerHTML = `
+                    <div class="flex justify-between text-xs">
+                        <span class="${isWinner ? 'font-bold text-slate-100' : 'text-slate-400'}">${formatClassName(cls)}</span>
+                        <span class="font-mono ${isWinner ? 'font-bold text-slate-100' : 'text-slate-400'}">${pct}%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div class="h-full ${barColor} transition-all duration-500" style="width: ${pct}%"></div>
+                    </div>
+                `;
+                container.appendChild(row);
+            }
+        }
+
+        async function sendHitlFeedback(isCorrect) {
+            if (!currentInferenceId) return;
+
+            try {
+                const res = await fetch('/api/v1/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        inference_id: currentInferenceId,
+                        is_correct: isCorrect,
+                        operator_comments: isCorrect ? 'Validado na bancada' : 'Corrigido pelo operador',
+                    }),
+                });
+                if (res.ok) {
+                    const ack = document.getElementById('hitlAck');
+                    ack.innerText = isCorrect ? '✅ Feedback gravado no Parquet! Modelo reforçado.' : '✏️ Falso positivo registrado para o próximo ciclo de treino!';
+                    ack.classList.remove('hidden');
+                    updateTelemetryStats();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function requestTechnicalReport() {
+            if (!currentInferenceId) return;
+
+            const btn = document.getElementById('btnGenAI');
+            btn.innerHTML = '<span>⏳</span> <span>Consultando DeepSeek V4.1...</span>';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/v1/generate-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        inference_id: currentInferenceId,
+                        prediction: currentPrediction,
+                        confidence: currentConfidence,
+                        is_unknown_anomaly: currentIsUnknown,
+                    }),
+                });
+                if (res.status === 429) {
+                    alert('Limite de geração de laudos atingido (10 a cada 2h).');
+                    return;
+                }
+                const data = await res.json();
+                
+                // Formatação simples de Markdown para HTML
+                let formatted = data.report_markdown
+                    .replace(/### (.*?)\n/g, '<h4 class="text-base font-bold text-white mt-2 mb-1">$1</h4>')
+                    .replace(/#### (.*?)\n/g, '<h5 class="text-sm font-semibold text-cyan-400 mt-3 mb-1 uppercase tracking-wide">$1</h5>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-100">$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em class="text-slate-400">$1</em>')
+                    .replace(/\n\n/g, '<p class="mb-2"></p>')
+                    .replace(/\n/g, '<br>');
+
+                document.getElementById('reportContent').innerHTML = formatted;
+                document.getElementById('reportSourceBadge').innerText = 'Motor: ' + data.model + ' (' + data.source + ')';
+                document.getElementById('modalReport').classList.remove('hidden');
+            } catch (err) {
+                alert('Falha ao gerar o laudo de causa-raiz.');
+            } finally {
+                btn.innerHTML = '<span>📄</span> <span>Gerar Laudo de Causa-Raiz (DeepSeek V4.1)</span>';
+                btn.disabled = false;
+            }
+        }
+
+        function closeReportModal() {
+            document.getElementById('modalReport').classList.add('hidden');
+        }
+
+        function setLoadingState(isLoading) {
+            const btn = document.getElementById('btnRandom');
+            if (isLoading) {
+                btn.innerHTML = '<span>⏳</span> <span>Processando Inferência em Borda (< 25ms)...</span>';
+                btn.disabled = true;
+            } else {
+                btn.innerHTML = '<span>🎲</span> <span>Disparar Câmera na Esteira (1-Clique)</span>';
+                btn.disabled = false;
+            }
+        }
+
+        // Inicializa contadores ao carregar
+        window.addEventListener('DOMContentLoaded', () => {
+            updateTelemetryStats();
+        });
+    </script>
+</body>
+</html>

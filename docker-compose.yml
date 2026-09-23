@@ -1,0 +1,44 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: positivo-vision-mlops:latest
+    container_name: positivo_vision_api
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - PORT=8000
+      - LOG_LEVEL=INFO
+      - OPENCODE_API_KEY=${OPENCODE_API_KEY:-}
+      - OPENCODE_BASE_URL=${OPENCODE_BASE_URL:-https://api.opencode.go/v1}
+      - OPENCODE_MODEL=${OPENCODE_MODEL:-DeepSeek V4.1 Flash}
+      - ADMIN_BYPASS_KEY=${ADMIN_BYPASS_KEY:-positivo_audit_bypass_key_2026}
+      - MLFLOW_TRACKING_URI=sqlite:////app/mlflow.db
+    volumes:
+      - ./data/telemetry:/app/data/telemetry
+      - ./mlflow.db:/app/mlflow.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.15.0
+    container_name: positivo_vision_mlflow
+    ports:
+      - "5000:5000"
+    command: >
+      mlflow ui
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root /mlflow/mlruns
+      --host 0.0.0.0
+      --port 5000
+    volumes:
+      - ./mlflow.db:/mlflow/mlflow.db
+      - ./mlruns:/mlflow/mlruns
+    restart: unless-stopped

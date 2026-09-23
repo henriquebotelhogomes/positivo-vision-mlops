@@ -1,0 +1,29 @@
+# Git e versionamento
+.git/
+.github/
+.gitignore
+
+# Ambientes virtuais e caches Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Dados brutos de treinamento e logs pesados
+data/raw/
+data/telemetry/*
+!data/sample_pool/
+mlruns/
+mlflow.db
+
+# Segredos locais
+.env
+.env.local
+
+# Documentações secundárias
+*.log
+tmp/
+.ruff_cache/

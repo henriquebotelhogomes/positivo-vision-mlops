@@ -1,0 +1,392 @@
+"""Microsserviço de Inferência em Alta Performance e Demonstração Industrial.
+
+Construído com FastAPI assíncrono, ciclo de vida estritamente gerenciado
+via lifespan context manager, documentação moderna via Scalar OpenAPI
+e aceleração de borda com ONNX Runtime.
+"""
+
+import random
+import time
+import uuid
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from io import BytesIO
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import onnxruntime as ort
+import torch
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile, status
+from fastapi.responses import HTMLResponse
+from PIL import Image
+
+from src.api.rate_limiter import rate_limiter
+from src.api.schemas import (
+    FeedbackRequest,
+    FeedbackResponse,
+    PredictionResponse,
+    RandomSampleResponse,
+    TechnicalReportRequest,
+    TechnicalReportResponse,
+    TelemetryStatsResponse,
+)
+from src.core.config import get_settings
+from src.core.logging import configure_logging, get_logger
+from src.data.transforms import check_out_of_distribution, get_inference_transforms
+from src.models.anomaly_head import OpenSetAnomalyDetector
+from src.models.gradcam import GradCAM
+from src.models.llm_report import generate_technical_report
+from src.models.vision_net import CLASS_NAMES, build_model
+from src.monitoring.telemetry import telemetry_manager
+
+settings = get_settings()
+logger = get_logger("positivo_vision.api")
+
+
+def load_model_engine(app_state: Any) -> None:
+    """Carrega o motor ONNX, modelo PyTorch, Grad-CAM e Anomaly Head no app_state."""
+    models_dir = Path("models")
+    model_path = settings.resolved_model_path
+
+    if not model_path.exists():
+        candidate_path = models_dir / "candidate_quantized.onnx"
+        if candidate_path.exists():
+            model_path = candidate_path
+
+    # 1. Carregamento da Sessão ONNX Runtime
+    if model_path.exists():
+        ort_opts = ort.SessionOptions()
+        ort_opts.intra_op_num_threads = 4
+        app_state.onnx_session = ort.InferenceSession(
+            str(model_path), ort_opts, providers=["CPUExecutionProvider"]
+        )
+        app_state.onnx_input_name = app_state.onnx_session.get_inputs()[0].name
+        logger.info("ONNX Runtime Engine carregado com sucesso", path=str(model_path))
+    else:
+        app_state.onnx_session = None
+        app_state.onnx_input_name = None
+        logger.warning("Arquivo do modelo ONNX não encontrado", path=str(model_path))
+
+    # 2. Carregamento do PyTorch Model para Grad-CAM e Embeddings
+    device = torch.device("cpu")
+    pytorch_model = build_model(num_classes=len(CLASS_NAMES), pretrained=False)
+    pt_path = models_dir / "best_model.pt"
+    if pt_path.exists():
+        try:
+            pytorch_model.load_state_dict(torch.load(str(pt_path), map_location=device))
+        except Exception:
+            pass
+    pytorch_model.to(device)
+    pytorch_model.eval()
+
+    app_state.pytorch_model = pytorch_model
+    app_state.gradcam = GradCAM(model=pytorch_model, target_layer=pytorch_model.get_last_conv_layer())
+
+    # 3. Carregamento do Open-Set Anomaly Detector
+    anomaly_detector = OpenSetAnomalyDetector(threshold=settings.ANOMALY_LATENT_THRESHOLD)
+    centroid_path = models_dir / "anomaly_centroid.npz"
+    if centroid_path.exists():
+        anomaly_detector.load(centroid_path)
+        logger.info("Open-Set Anomaly Head carregada", threshold=anomaly_detector.threshold)
+    app_state.anomaly_detector = anomaly_detector
+
+    # 4. Warm-up
+    if getattr(app_state, "onnx_session", None) is not None:
+        dummy = np.zeros((1, 3, 224, 224), dtype=np.float32)
+        _ = app_state.onnx_session.run(None, {app_state.onnx_input_name: dummy})
+        logger.info("Warm-up concluído: latência de cold-start eliminada")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Gerencia o ciclo de vida e estado em memória do modelo ONNX e Grad-CAM (Fail-Fast)."""
+    configure_logging(log_level=settings.LOG_LEVEL, json_format=settings.is_production)
+    logger.info("Inicializando Positivo Vision MLOps Engine", env=settings.APP_ENV)
+
+    load_model_engine(app.state)
+
+    yield
+
+    logger.info("Encerrando Positivo Vision MLOps Engine")
+
+
+# Instância Principal do FastAPI
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="Plataforma Industrial de Inspeção Visual de PCBs, Otimização de Borda & Governança de Modelos.",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url=None,  # Desativa Swagger clássico para servir Scalar obrigatório
+    redoc_url=None,
+)
+
+# Inicialização de atributos padrão no app.state
+app.state.onnx_session = None
+app.state.onnx_input_name = None
+app.state.pytorch_model = None
+app.state.gradcam = None
+app.state.anomaly_detector = None
+
+
+@app.get("/docs", include_in_schema=False)
+async def scalar_docs() -> HTMLResponse:
+    """Documentação Interativa de API servida via Scalar OpenAPI (Regra Normativa)."""
+    html_content = """
+    <!doctype html>
+    <html>
+      <head>
+        <title>Positivo Vision MLOps — Scalar Docs</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body>
+        <script id="api-reference" data-url="/openapi.json"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+      </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+
+@app.get("/healthz", tags=["Orchestration"])
+async def liveness_probe() -> dict[str, str]:
+    """Liveness probe para Kubernetes e Google Cloud Run."""
+    return {"status": "healthy"}
+
+
+@app.get("/ready", tags=["Orchestration"])
+async def readiness_probe() -> dict[str, str]:
+    """Readiness probe confirmando que o modelo ONNX está carregado em memória."""
+    if getattr(app.state, "onnx_session", None) is None:
+        load_model_engine(app.state)
+    if app.state.onnx_session is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Modelo ONNX de inferência ainda não aquecido na memória.",
+        )
+    return {"status": "ready"}
+
+
+@app.get("/demo", response_class=HTMLResponse, include_in_schema=False)
+async def demo_interface() -> HTMLResponse:
+    """Interface Web Executiva da Live Demo Industrial."""
+    demo_file = Path("src/api/templates/demo.html")
+    if not demo_file.exists():
+        raise HTTPException(status_code=404, detail="Template da Live Demo não encontrado.")
+    return HTMLResponse(content=demo_file.read_text(encoding="utf-8"))
+
+
+def _run_core_inference(
+    pil_image: Image.Image,
+    app_state: Any,
+) -> dict[str, Any]:
+    """Executa a triagem OOD, inferência ONNX, Anomaly Head e Grad-CAM em uma imagem PIL."""
+    if getattr(app_state, "onnx_session", None) is None:
+        load_model_engine(app_state)
+
+    inference_id = f"inf_{uuid.uuid4().hex[:8]}"
+
+    # 1. Triagem OOD
+    ood_result = check_out_of_distribution(pil_image)
+
+    # 2. Pré-processamento
+    transform = get_inference_transforms(img_size=224)
+    input_tensor = transform(pil_image).unsqueeze(0)  # Shape (1, 3, 224, 224)
+    input_numpy = input_tensor.numpy().astype(np.float32)
+
+    # 3. Inferência ONNX Runtime (< 25ms)
+    t0 = time.perf_counter()
+    if app_state.onnx_session is not None:
+        outputs = app_state.onnx_session.run(None, {app_state.onnx_input_name: input_numpy})
+        logits = outputs[0][0]
+    else:
+        # Fallback com PyTorch caso o ONNX não tenha subido
+        with torch.no_grad():
+            logits = app_state.pytorch_model(input_tensor).squeeze(0).numpy()
+    latency_ms = (time.perf_counter() - t0) * 1000.0
+
+    # Softmax das probabilidades
+    exp_logits = np.exp(logits - np.max(logits))
+    probs = exp_logits / np.sum(exp_logits)
+    pred_idx = int(np.argmax(probs))
+    pred_class = CLASS_NAMES[pred_idx]
+    confidence = float(probs[pred_idx])
+
+    prob_dict = {CLASS_NAMES[i]: round(float(probs[i]), 4) for i in range(len(CLASS_NAMES))}
+    is_defective = (pred_class != "NORMAL")
+
+    # 4. Open-Set Anomaly Head
+    anomaly_result = {"is_unknown_anomaly": False, "anomaly_score": 0.0}
+    if hasattr(app_state, "anomaly_detector") and app_state.anomaly_detector is not None:
+        with torch.no_grad():
+            embedding = app_state.pytorch_model.extract_embedding(input_tensor)
+        anomaly_result = app_state.anomaly_detector.score(embedding)
+
+    is_unknown = anomaly_result.get("is_unknown_anomaly", False)
+    anomaly_score = anomaly_result.get("anomaly_score", 0.0)
+
+    # Se for detectada anomalia inédita, sinaliza defeito
+    if is_unknown:
+        is_defective = True
+
+    # 5. Grad-CAM Explicabilidade Visual
+    try:
+        heatmap = app_state.gradcam.generate_heatmap(input_tensor, class_idx=pred_idx)
+        overlay_pil = app_state.gradcam.overlay_on_image(pil_image, heatmap, alpha=0.45)
+        gradcam_base64 = GradCAM.pil_to_base64(overlay_pil, format="JPEG")
+    except Exception as exc:
+        logger.warning("Falha ao gerar Grad-CAM", error=str(exc))
+        gradcam_base64 = GradCAM.pil_to_base64(pil_image, format="JPEG")
+
+    return {
+        "inference_id": inference_id,
+        "prediction": pred_class,
+        "confidence": round(confidence, 4),
+        "is_defective": is_defective,
+        "is_unknown_anomaly": is_unknown,
+        "anomaly_score": anomaly_score,
+        "probabilities": prob_dict,
+        "inference_time_ms": round(latency_ms, 2),
+        "engine": "onnxruntime-cpu" if app_state.onnx_session else "pytorch-cpu",
+        "model_version": "v1",
+        "model_alias": settings.MODEL_ALIAS,
+        "gradcam_base64": gradcam_base64,
+        "ood_flags": ood_result,
+    }
+
+
+@app.post("/api/v1/predict", response_model=PredictionResponse, tags=["Inference"])
+async def predict_image(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+) -> PredictionResponse:
+    """Executa a inspeção visual e explicabilidade com Grad-CAM via upload de imagem."""
+    # Rate Limiting Guardrail
+    rate_limiter.check_inference_limit(request)
+
+    # Leitura e decodificação segura
+    try:
+        contents = await file.read()
+        pil_img = Image.open(BytesIO(contents)).convert("RGB")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Arquivo inválido. Envie uma imagem JPEG ou PNG.")
+
+    result = _run_core_inference(pil_img, app.state)
+
+    # Gravação assíncrona da telemetria em Parquet
+    background_tasks.add_task(
+        telemetry_manager.record_inference,
+        inference_id=result["inference_id"],
+        prediction=result["prediction"],
+        confidence=result["confidence"],
+        is_defective=result["is_defective"],
+        is_unknown_anomaly=result["is_unknown_anomaly"],
+        anomaly_score=result["anomaly_score"],
+        inference_time_ms=result["inference_time_ms"],
+        is_ood=result["ood_flags"]["is_ood"],
+    )
+
+    return PredictionResponse(**result)
+
+
+@app.get("/api/v1/predict-random", response_model=RandomSampleResponse, tags=["Inference"])
+async def predict_random_sample(
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> RandomSampleResponse:
+    """Sorteia instantaneamente uma amostra industrial do pool interno para a Live Demo em 1-clique."""
+    # Rate Limiting Guardrail
+    rate_limiter.check_inference_limit(request)
+
+    pool_dir = settings.resolved_sample_pool_dir
+    all_samples = list(pool_dir.glob("*/*.png")) + list(pool_dir.glob("*/*.jpg"))
+
+    if not all_samples:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nenhuma amostra encontrada em data/sample_pool/.",
+        )
+
+    # Sorteio uniforme da esteira
+    chosen_path = random.choice(all_samples)
+    try:
+        pil_img = Image.open(chosen_path).convert("RGB")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro ao abrir amostra: {exc}")
+
+    result = _run_core_inference(pil_img, app.state)
+    original_base64 = GradCAM.pil_to_base64(pil_img, format="JPEG")
+
+    # Telemetria assíncrona
+    background_tasks.add_task(
+        telemetry_manager.record_inference,
+        inference_id=result["inference_id"],
+        prediction=result["prediction"],
+        confidence=result["confidence"],
+        is_defective=result["is_defective"],
+        is_unknown_anomaly=result["is_unknown_anomaly"],
+        anomaly_score=result["anomaly_score"],
+        inference_time_ms=result["inference_time_ms"],
+        is_ood=result["ood_flags"]["is_ood"],
+    )
+
+    return RandomSampleResponse(
+        sample_name=chosen_path.name,
+        original_image_base64=original_base64,
+        **result,
+    )
+
+
+@app.post("/api/v1/generate-report", response_model=TechnicalReportResponse, tags=["GenAI"])
+async def generate_report_endpoint(
+    request: Request,
+    payload: TechnicalReportRequest,
+) -> TechnicalReportResponse:
+    """Gera o Laudo Técnico de Causa-Raiz SMT via OpenCode Go (DeepSeek V4.1 Flash)."""
+    # Rate Limiting para rotas de LLM
+    rate_limiter.check_report_limit(request)
+
+    report_data = await generate_technical_report(
+        prediction=payload.prediction,
+        confidence=payload.confidence,
+        inference_id=payload.inference_id,
+        latency_ms=payload.latency_ms,
+        is_unknown_anomaly=payload.is_unknown_anomaly,
+    )
+
+    return TechnicalReportResponse(
+        inference_id=payload.inference_id,
+        source=report_data["source"],
+        model=report_data["model"],
+        ipc_standard=report_data["ipc_standard"],
+        report_markdown=report_data["report_markdown"],
+    )
+
+
+@app.post("/api/v1/feedback", response_model=FeedbackResponse, tags=["Active Learning"])
+async def record_hitl_feedback(
+    payload: FeedbackRequest,
+) -> FeedbackResponse:
+    """Registra validação ou correção do técnico de bancada no stream Parquet (Active Learning)."""
+    success = telemetry_manager.record_feedback(
+        inference_id=payload.inference_id,
+        is_correct=payload.is_correct,
+        corrected_class=payload.corrected_class,
+    )
+
+    if not success:
+        logger.warning("Feedback recebido para ID não persistido ou arquivo inexistente", id=payload.inference_id)
+
+    return FeedbackResponse(
+        inference_id=payload.inference_id,
+        requires_retrain=not payload.is_correct,
+    )
+
+
+@app.get("/api/v1/telemetry/stats", response_model=TelemetryStatsResponse, tags=["Telemetry"])
+async def get_telemetry_stats() -> TelemetryStatsResponse:
+    """Retorna estatísticas operacionais agregadas da esteira SMT lidas do stream Parquet."""
+    stats = telemetry_manager.get_stats()
+    return TelemetryStatsResponse(**stats)

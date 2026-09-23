@@ -1,0 +1,32 @@
+# Python & Ambientes Virtuais
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Configurações & Segredos
+.env
+!.env.example
+
+# MLOps & Tracking Local
+mlruns/
+mlflow.db
+.pytest_cache/
+.ruff_cache/
+
+# Dados Pesados de Treinamento
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/telemetry/*
+!data/telemetry/.gitkeep
+
+# IDEs & SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
