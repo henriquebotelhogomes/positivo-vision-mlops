@@ -35,10 +35,12 @@ class IndustrialVisionNet(nn.Module):
         self.features = base_model.features
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
-        # Congela pesos do extrator para fine-tuning rápido em CPU
+        # Congela pesos iniciais do extrator e deixa as últimas camadas para adaptação industrial
         if freeze_backbone:
             for param in self.features.parameters():
                 param.requires_grad = False
+            for param in self.features[-2:].parameters():
+                param.requires_grad = True
 
         # Dimensão do espaço latente da MobileNetV3-Large
         in_features = 960

@@ -241,6 +241,18 @@
                     <span class="text-slate-600">ONNX Edge (< 5ms)</span>
                 </div>
 
+                <!-- Auditoria & HITL Dashboard Button -->
+                <button onclick="openAuditModal()" class="px-3 py-1.5 rounded-md bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-semibold transition flex items-center gap-1.5 shadow-xs" title="Visualizar Telemetria e Auditorias Human-in-the-Loop">
+                    <svg class="w-4 h-4 text-positivo-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    <span>Auditoria & HITL</span>
+                </button>
+
+                <!-- Amostras & Dataset Button -->
+                <button onclick="openDatasetModal()" class="px-3 py-1.5 rounded-md bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-semibold transition flex items-center gap-1.5 shadow-xs" title="Download de Amostras de Teste e Dataset DeepPCB">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    <span>Amostras & Dataset</span>
+                </button>
+
                 <!-- Scalar Docs -->
                 <a href="/docs" target="_blank" class="px-3.5 py-1.5 rounded-md bg-positivo-blue hover:bg-positivo-dark text-white font-semibold transition flex items-center gap-1 shadow-sm">
                     <span>Documentação API</span>
@@ -281,19 +293,37 @@
                 </div>
 
                 <div class="space-y-3">
+                    <!-- Quick Category Selector Chips -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Amostrador da Linha SMT:</label>
+                            <span id="selectedCategoryBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-positivo-blue/10 text-positivo-blue font-bold">50% Balanceado</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1 text-[11px] font-semibold">
+                            <button id="chip-any" onclick="setSampleCategory('any')" class="sample-chip py-1 px-1 rounded border text-center transition bg-positivo-blue text-white border-positivo-blue shadow-xs">🎲 Qualquer</button>
+                            <button id="chip-normal" onclick="setSampleCategory('normal')" class="sample-chip py-1 px-1 rounded border text-center transition bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300">✅ Conforme</button>
+                            <button id="chip-defect" onclick="setSampleCategory('defect')" class="sample-chip py-1 px-1 rounded border text-center transition bg-slate-50 text-slate-700 border-slate-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300">❌ Defeito</button>
+                            <button id="chip-unknown" onclick="setSampleCategory('unknown')" class="sample-chip py-1 px-1 rounded border text-center transition bg-slate-50 text-slate-700 border-slate-200 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300">⚠️ Inédita</button>
+                        </div>
+                    </div>
+
                     <!-- Primary Action: 1-Click Inspection -->
                     <button id="btnRandom" onclick="triggerRandomInspection()" class="w-full py-3.5 px-4 rounded-lg bg-positivo-blue hover:bg-positivo-dark text-white font-bold text-sm shadow-md active:scale-[0.99] transition flex items-center justify-center gap-2.5">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        <span>Capturar Amostra da Esteira (1-Clique)</span>
+                        <span id="btnRandomText">Capturar Amostra da Esteira (1-Clique)</span>
                     </button>
 
-                    <!-- Secondary Action: Manual Upload -->
-                    <div>
+                    <!-- Secondary Action: Manual Upload + Download Pack Link -->
+                    <div class="flex items-center gap-2">
                         <input type="file" id="fileUpload" accept="image/*" class="hidden" onchange="handleManualUpload(event)">
-                        <button onclick="document.getElementById('fileUpload').click()" class="w-full py-2.5 px-4 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold transition flex items-center justify-center gap-2 shadow-sm">
+                        <button onclick="document.getElementById('fileUpload').click()" class="flex-1 py-2 px-3 rounded-lg bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-xs">
                             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                            <span>Fazer Upload de Imagem de Bancada</span>
+                            <span>Fazer Upload</span>
                         </button>
+                        <a href="/api/v1/download-samples" class="py-2 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-xs" title="Baixar lote de imagens de teste (.ZIP) para testar upload">
+                            <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span>Baixar ZIP</span>
+                        </a>
                     </div>
                 </div>
 
@@ -520,6 +550,178 @@
         </div>
     </div>
 
+    <!-- =========================================================================
+         Modal de Auditoria Fabril & HITL (Telemetria Parquet)
+         ========================================================================= -->
+    <div id="modalAudit" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-positivo-blue/10 flex items-center justify-center text-positivo-blue">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <span>Painel de Auditoria Fabril & Human-in-the-Loop</span>
+                            <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-positivo-blue/10 text-positivo-blue font-bold">Telemetria Parquet</span>
+                        </h3>
+                        <p class="text-xs text-slate-500">Histórico de diagnósticos da IA validados pelos operadores na esteira SMT (Curitiba POSI3)</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="refreshAuditTable()" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+                        <svg class="w-3.5 h-3.5 text-positivo-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span>Atualizar</span>
+                    </button>
+                    <button onclick="closeAuditModal()" class="w-8 h-8 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition">✕</button>
+                </div>
+            </div>
+
+            <!-- Modal Body (KPIs + Table) -->
+            <div class="p-6 overflow-y-auto space-y-5">
+                <!-- 5 KPI Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Inspecionado</p>
+                        <p id="auditTotal" class="text-2xl font-bold font-mono text-slate-900 mt-1">--</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Stream Parquet</p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                        <p class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Concordância HITL</p>
+                        <p id="auditAgreementRate" class="text-2xl font-bold font-mono text-emerald-700 mt-1">--%</p>
+                        <p id="auditAgreementsCount" class="text-[10px] text-emerald-600 mt-0.5">-- laudos confirmados</p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200">
+                        <p class="text-[11px] font-bold text-rose-800 uppercase tracking-wider">Divergências</p>
+                        <p id="auditDivergences" class="text-2xl font-bold font-mono text-rose-700 mt-1">--</p>
+                        <p id="auditRetrainCount" class="text-[10px] text-rose-600 mt-0.5">Marcadas p/ retreino</p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200">
+                        <p class="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Taxa de Defeitos</p>
+                        <p id="auditDefectRate" class="text-2xl font-bold font-mono text-amber-700 mt-1">--%</p>
+                        <p id="auditUnknownsCount" class="text-[10px] text-amber-600 mt-0.5">-- anomalias inéditas</p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-positivo-blue/5 border border-positivo-blue/20">
+                        <p class="text-[11px] font-bold text-positivo-navy uppercase tracking-wider">Latência P95</p>
+                        <p id="auditLatencyP95" class="text-2xl font-bold font-mono text-positivo-blue mt-1">-- ms</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">ONNX Runtime CPU</p>
+                    </div>
+                </div>
+
+                <!-- Table of Audits -->
+                <div class="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                    <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">Últimas Amostras Auditadas</span>
+                        <span id="auditRecordsCount" class="text-[11px] font-mono text-slate-500">Exibindo registros recentes</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-[45vh]">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100/70 text-slate-600 font-mono text-[11px] sticky top-0 border-b border-slate-200">
+                                <tr>
+                                    <th class="py-2.5 px-3">ID Inspeção</th>
+                                    <th class="py-2.5 px-3">Horário</th>
+                                    <th class="py-2.5 px-3">Diagnóstico IA</th>
+                                    <th class="py-2.5 px-3">Confiança</th>
+                                    <th class="py-2.5 px-3">Validação Humana</th>
+                                    <th class="py-2.5 px-3">Retreino</th>
+                                    <th class="py-2.5 px-3">Latência</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTableBody" class="divide-y divide-slate-100 font-sans">
+                                <tr>
+                                    <td colspan="7" class="py-8 text-center text-slate-400">Carregando telemetria...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center text-xs">
+                <span class="text-slate-500 font-mono">Stream Parquet: data/telemetry/inferences.parquet</span>
+                <button onclick="closeAuditModal()" class="px-4 py-2 rounded-lg bg-positivo-blue hover:bg-positivo-dark text-white font-semibold transition">Fechar Painel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         Modal de Download de Amostras & Dataset DeepPCB
+         ========================================================================= -->
+    <div id="modalDataset" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Amostras Industriais & Dataset de Referência</h3>
+                        <p class="text-xs text-slate-500">Fonte de dados de PCBs para testes de upload manual e homologação</p>
+                    </div>
+                </div>
+                <button onclick="closeDatasetModal()" class="w-8 h-8 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition">✕</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-4 text-xs text-slate-700 leading-relaxed">
+                <!-- Download Local Pack -->
+                <div class="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between gap-4">
+                    <div>
+                        <p class="font-bold text-sm text-emerald-950">📦 Pacote Pronto de Amostras (.ZIP)</p>
+                        <p class="text-[11px] text-emerald-800 mt-1">Download de imagens da esteira (placas normais, curto, trilha aberta, furo ausente, anomalias) com instruções de teste.</p>
+                    </div>
+                    <a href="/api/v1/download-samples" class="shrink-0 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        <span>Baixar .ZIP</span>
+                    </a>
+                </div>
+
+                <div class="border-t border-slate-100 pt-3">
+                    <h4 class="font-bold text-slate-900 text-sm mb-1.5">🔬 Dataset Industrial de Referência: DeepPCB</h4>
+                    <p class="text-slate-600 mb-3">
+                        O modelo Positivo Vision foi concebido sobre as classes e defeitos canônicos da norma <strong>IPC-A-610</strong> e do dataset público <strong>DeepPCB</strong> (Peking University), composto por mais de 1.500 pares de imagens de alta resolução com anotações de defeitos de solda, trilhas e substrato.
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <a href="https://github.com/Charmve/Surface-Defect-Detection/tree/master/DeepPCB" target="_blank" class="p-3 rounded-lg border border-slate-200 hover:border-positivo-blue hover:bg-slate-50 transition flex items-center justify-between group">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-800 group-hover:text-positivo-blue">Repositório GitHub</span>
+                                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">PKU / Open-Source</span>
+                            </div>
+                            <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-positivo-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+                        <a href="https://www.kaggle.com/datasets/akhatova/pcb-defects" target="_blank" class="p-3 rounded-lg border border-slate-200 hover:border-positivo-blue hover:bg-slate-50 transition flex items-center justify-between group">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-800 group-hover:text-positivo-blue">Dataset no Kaggle</span>
+                                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">PCB Defects</span>
+                            </div>
+                            <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-positivo-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Passo a passo -->
+                <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p class="font-bold text-slate-800 mb-1">Como testar upload manual:</p>
+                    <ol class="list-decimal list-inside space-y-0.5 text-slate-600 text-[11px]">
+                        <li>Baixe o arquivo <strong>.ZIP</strong> ou obtenha imagens do repositório DeepPCB.</li>
+                        <li>Descompacte a pasta no seu computador.</li>
+                        <li>Clique em <strong>"Fazer Upload de Imagem de Bancada"</strong> e selecione qualquer imagem.</li>
+                        <li>Observe a inferência em tempo real (< 5ms) e o mapa de ativação Grad-CAM!</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                <button onclick="closeDatasetModal()" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold transition">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Application Logic -->
     <script>
         let currentOriginalBase64 = null;
@@ -639,10 +841,112 @@
             }
         }
 
+        let selectedSampleCategory = 'any';
+
+        function setSampleCategory(cat) {
+            selectedSampleCategory = cat;
+            const chips = ['any', 'normal', 'defect', 'unknown'];
+            chips.forEach(c => {
+                const el = document.getElementById('chip-' + c);
+                if (!el) return;
+                if (c === cat) {
+                    el.className = 'sample-chip py-1 px-1 rounded border text-center transition bg-positivo-blue text-white border-positivo-blue shadow-xs font-bold';
+                } else {
+                    el.className = 'sample-chip py-1 px-1 rounded border text-center transition bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100';
+                }
+            });
+
+            const labels = {
+                'any': '50% Balanceado',
+                'normal': 'Só Conformes',
+                'defect': 'Só Defeitos',
+                'unknown': 'Só Inéditas (Open-Set)'
+            };
+            const badge = document.getElementById('selectedCategoryBadge');
+            if (badge) badge.innerText = labels[cat] || cat;
+        }
+
+        function openAuditModal() {
+            document.getElementById('modalAudit').classList.remove('hidden');
+            refreshAuditTable();
+        }
+
+        function closeAuditModal() {
+            document.getElementById('modalAudit').classList.add('hidden');
+        }
+
+        function openDatasetModal() {
+            document.getElementById('modalDataset').classList.remove('hidden');
+        }
+
+        function closeDatasetModal() {
+            document.getElementById('modalDataset').classList.add('hidden');
+        }
+
+        async function refreshAuditTable() {
+            const tbody = document.getElementById('auditTableBody');
+            if (!tbody) return;
+            try {
+                const res = await fetch('/api/v1/telemetry/audits?limit=50');
+                if (!res.ok) throw new Error('Falha ao carregar auditorias');
+                const data = await res.json();
+
+                // Atualiza KPIs do Modal
+                const stats = data.stats;
+                document.getElementById('auditTotal').innerText = stats.total_inspections;
+                document.getElementById('auditAgreementRate').innerText = stats.agreement_rate_pct + '%';
+                document.getElementById('auditAgreementsCount').innerText = `${stats.operator_agreements_count} laudos confirmados`;
+                document.getElementById('auditDivergences').innerText = stats.operator_divergences_count;
+                document.getElementById('auditRetrainCount').innerText = `${stats.requires_retrain_count} marcadas p/ retreino`;
+                document.getElementById('auditDefectRate').innerText = stats.defect_rate_pct + '%';
+                document.getElementById('auditUnknownsCount').innerText = `${stats.unknown_anomalies_count} anomalias inéditas`;
+                document.getElementById('auditLatencyP95').innerText = stats.latency_p95_ms + ' ms';
+                document.getElementById('auditRecordsCount').innerText = `Exibindo ${data.records.length} registros recentes`;
+
+                if (data.records.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Nenhuma inspeção gravada no stream Parquet ainda. Realize testes na esteira!</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = data.records.map(r => {
+                    let statusBadge = '';
+                    if (r.status === 'CONFIRMADO') {
+                        statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">✅ Confirmado</span>';
+                    } else if (r.status === 'DIVERGENCIA') {
+                        const corr = r.operator_corrected_class ? ` (${r.operator_corrected_class})` : '';
+                        statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">⚠️ Divergência${corr}</span>`;
+                    } else {
+                        statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">⏳ Pendente</span>';
+                    }
+
+                    const retrainBadge = r.requires_retrain
+                        ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200">RETREINO</span>'
+                        : '<span class="text-slate-300 font-mono text-[10px]">—</span>';
+
+                    const timeStr = r.timestamp ? new Date(r.timestamp).toLocaleTimeString('pt-BR') : '--:--:--';
+                    const isDef = r.is_defective ? 'text-rose-600 font-semibold' : 'text-emerald-700 font-semibold';
+
+                    return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-2.5 px-3 font-mono text-[11px] text-slate-700">${r.inference_id}</td>
+                            <td class="py-2.5 px-3 font-mono text-[11px] text-slate-500">${timeStr}</td>
+                            <td class="py-2.5 px-3 ${isDef}">${r.prediction}</td>
+                            <td class="py-2.5 px-3 font-mono">${(r.confidence * 100).toFixed(1)}%</td>
+                            <td class="py-2.5 px-3">${statusBadge}</td>
+                            <td class="py-2.5 px-3 text-center">${retrainBadge}</td>
+                            <td class="py-2.5 px-3 font-mono text-slate-500">${r.inference_time_ms}ms</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-rose-500 font-medium">Erro ao carregar telemetria do microsserviço.</td></tr>`;
+            }
+        }
+
         async function triggerRandomInspection() {
             setLoadingState(true);
             try {
-                const res = await fetch('/api/v1/predict-random');
+                const res = await fetch(`/api/v1/predict-random?category=${selectedSampleCategory}`);
                 if (res.status === 429) {
                     const err = await res.json();
                     alert(err.detail.message || 'Limite de testes atingido (25 requisições a cada 2h).');
@@ -651,6 +955,9 @@
                 const data = await res.json();
                 renderInspectionResult(data);
                 updateTelemetryStats();
+                if (!document.getElementById('modalAudit').classList.contains('hidden')) {
+                    refreshAuditTable();
+                }
             } catch (err) {
                 alert('Erro ao conectar ao microsserviço de inferência.');
             } finally {
@@ -831,6 +1138,9 @@
                     ack.innerText = isCorrect ? '✓ Validação registrada no Parquet. Modelo auditado!' : '✓ Divergência registrada para retreinamento contínuo!';
                     ack.classList.remove('hidden');
                     updateTelemetryStats();
+                    if (!document.getElementById('modalAudit').classList.contains('hidden')) {
+                        refreshAuditTable();
+                    }
                 }
             } catch (err) {
                 console.error(err);

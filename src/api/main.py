@@ -8,6 +8,7 @@ e aceleração de borda com ONNX Runtime.
 import random
 import time
 import uuid
+import zipfile
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from io import BytesIO
@@ -18,12 +19,14 @@ import numpy as np
 import onnxruntime as ort
 import torch
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile, status
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
 from src.api.rate_limiter import rate_limiter
 from src.api.schemas import (
+    AuditRecord,
+    AuditsResponse,
     FeedbackRequest,
     FeedbackResponse,
     PredictionResponse,
@@ -311,13 +314,50 @@ async def predict_image(
 async def predict_random_sample(
     request: Request,
     background_tasks: BackgroundTasks,
+    category: str = "any",
 ) -> RandomSampleResponse:
-    """Sorteia instantaneamente uma amostra industrial do pool interno para a Live Demo em 1-clique."""
+    """Sorteia instantaneamente uma amostra industrial do pool interno para a Live Demo em 1-clique.
+
+    Categorias suportadas: 'any' (balanceado 50% normal / 50% defeito), 'normal', 'defect', 'unknown'.
+    """
     # Rate Limiting Guardrail
     rate_limiter.check_inference_limit(request)
 
     pool_dir = settings.resolved_sample_pool_dir
-    all_samples = list(pool_dir.glob("*/*.png")) + list(pool_dir.glob("*/*.jpg"))
+    cat_lower = category.lower().strip()
+
+    if cat_lower == "normal":
+        candidate_dirs = [pool_dir / "normal"]
+    elif cat_lower == "defect":
+        candidate_dirs = [
+            pool_dir / "defect_short",
+            pool_dir / "defect_open",
+            pool_dir / "defect_missing_hole",
+            pool_dir / "defect_spurious",
+        ]
+    elif cat_lower == "unknown":
+        candidate_dirs = [pool_dir / "unknown"]
+    else:
+        # Sorteio balanceado: 50% chance de placa CONFORME e 50% chance de defeito/anomalia
+        if random.random() < 0.5:
+            candidate_dirs = [pool_dir / "normal"]
+        else:
+            candidate_dirs = [
+                pool_dir / "defect_short",
+                pool_dir / "defect_open",
+                pool_dir / "defect_missing_hole",
+                pool_dir / "defect_spurious",
+                pool_dir / "unknown",
+            ]
+
+    all_samples = []
+    for d in candidate_dirs:
+        if d.exists():
+            all_samples.extend(list(d.glob("*.png")) + list(d.glob("*.jpg")))
+
+    # Fallback geral se a categoria escolhida estiver vazia
+    if not all_samples:
+        all_samples = list(pool_dir.glob("*/*.png")) + list(pool_dir.glob("*/*.jpg"))
 
     if not all_samples:
         raise HTTPException(
@@ -406,3 +446,58 @@ async def get_telemetry_stats() -> TelemetryStatsResponse:
     """Retorna estatísticas operacionais agregadas da esteira SMT lidas do stream Parquet."""
     stats = telemetry_manager.get_stats()
     return TelemetryStatsResponse(**stats)
+
+
+@app.get("/api/v1/telemetry/audits", response_model=AuditsResponse, tags=["Telemetry"])
+async def get_recent_audits(limit: int = 50) -> AuditsResponse:
+    """Retorna o histórico detalhado de auditorias e validações humanas da esteira."""
+    stats = telemetry_manager.get_stats()
+    records = telemetry_manager.get_recent_audits(limit=limit)
+    return AuditsResponse(
+        total_returned=len(records),
+        stats=TelemetryStatsResponse(**stats),
+        records=[AuditRecord(**r) for r in records],
+    )
+
+
+@app.get("/api/v1/download-samples", tags=["Dataset"])
+async def download_samples_zip() -> StreamingResponse:
+    """Gera e faz download de um pacote ZIP com amostras da linha SMT para testes manuais de upload."""
+    pool_dir = settings.resolved_sample_pool_dir
+    zip_buffer = BytesIO()
+
+    with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        readme_content = (
+            "POSITIVO TECNOLOGIA - PACOTE DE AMOSTRAS DE TESTE (AOI SMT)\n"
+            "===========================================================\n\n"
+            "Este arquivo contém amostras industriais balanceadas para teste do sistema Positivo Vision.\n"
+            "Você pode fazer upload de qualquer uma destas imagens na interface Web (/demo):\n\n"
+            "Pastas incluídas:\n"
+            "  - normal/              : Placas conformes (sem defeito)\n"
+            "  - defect_short/        : Placas com curto-circuito de solda\n"
+            "  - defect_open/         : Placas com trilha rompida ou circuito aberto\n"
+            "  - defect_missing_hole/ : Placas com furo de via/passagem ausente\n"
+            "  - defect_spurious/     : Placas com rebarba/cobre espúrio\n"
+            "  - unknown/             : Placas com defeitos anômalos inéditos (Open-Set Anomaly)\n\n"
+            "Dataset de Referência Industrial:\n"
+            "  DeepPCB Dataset (Peking University / PKU)\n"
+            "  GitHub: https://github.com/Charmve/Surface-Defect-Detection/tree/master/DeepPCB\n"
+            "  Kaggle: https://www.kaggle.com/datasets/akhatova/pcb-defects\n"
+        )
+        zf.writestr("LEIAME.txt", readme_content)
+
+        categories = ["normal", "defect_short", "defect_open", "defect_missing_hole", "defect_spurious", "unknown"]
+        for cat in categories:
+            cat_dir = pool_dir / cat
+            if cat_dir.exists():
+                imgs = sorted(list(cat_dir.glob("*.png")) + list(cat_dir.glob("*.jpg")))[:3]
+                for img_p in imgs:
+                    zf.write(img_p, arcname=f"{cat}/{img_p.name}")
+
+    zip_buffer.seek(0)
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=positivo_vision_amostras_teste.zip"},
+    )
+

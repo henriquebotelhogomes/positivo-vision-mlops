@@ -94,5 +94,37 @@ class TelemetryStatsResponse(BaseModel):
     defect_rate_pct: float = Field(description="Taxa percentual de defeitos na linha SMT")
     unknown_anomalies_count: int = Field(description="Total de anomalias inéditas enviadas para quarentena")
     operator_agreements_count: int = Field(description="Validações humanas confirmadas pelo operador")
+    operator_divergences_count: int = Field(default=0, description="Divergências registradas pelo operador")
+    pending_audits_count: int = Field(default=0, description="Auditorias pendentes de validação humana")
+    agreement_rate_pct: float = Field(default=100.0, description="Taxa de concordância Homem-Máquina (%)")
+    requires_retrain_count: int = Field(default=0, description="Amostras marcadas para retreino contínuo")
     latency_p95_ms: float = Field(description="Latência de inferência percentil 95 em ms")
     active_champion: str = Field(default="models/champion.onnx")
+
+
+class AuditRecord(BaseModel):
+    """Registro individual de auditoria fabril da telemetria."""
+
+    inference_id: str
+    timestamp: str | None = None
+    prediction: str
+    confidence: float
+    is_defective: bool
+    is_unknown_anomaly: bool
+    anomaly_score: float
+    inference_time_ms: float
+    is_ood: bool
+    operator_confirmed: bool | None = None
+    operator_corrected_class: str | None = None
+    requires_retrain: bool = False
+    status: str = "PENDENTE"
+
+
+class AuditsResponse(BaseModel):
+    """Lista de auditorias recentes para o painel operacional."""
+
+    status: str = "success"
+    total_returned: int
+    stats: TelemetryStatsResponse
+    records: list[AuditRecord]
+

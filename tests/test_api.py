@@ -120,3 +120,41 @@ async def test_feedback_and_telemetry_flow():
         stats = res_stats.json()
         assert "total_inspections" in stats
         assert "defect_rate_pct" in stats
+
+
+@pytest.mark.asyncio
+async def test_telemetry_audits_endpoint():
+    """Valida o endpoint de auditorias detalhadas para o painel HITL."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/telemetry/audits?limit=10")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "success"
+        assert "stats" in data
+        assert "records" in data
+        assert isinstance(data["records"], list)
+
+
+@pytest.mark.asyncio
+async def test_download_samples_zip_endpoint():
+    """Valida a geração e download do pacote ZIP de amostras de teste."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/download-samples")
+        assert res.status_code == 200
+        assert res.headers["content-type"] == "application/zip"
+        assert len(res.content) > 1000  # Pacote com imagens reais
+
+
+@pytest.mark.asyncio
+async def test_predict_random_with_category_normal():
+    """Valida o sorteio com filtro específico de categoria (ex: normal)."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/predict-random?category=normal")
+        assert res.status_code == 200
+        data = res.json()
+        assert "sample_name" in data
+        assert data["sample_name"].startswith("sample_normal")
+

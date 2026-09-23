@@ -11,6 +11,7 @@ Executa o ciclo de vida completo:
 8. Governança e promoção Champion vs. Challenger no Model Registry.
 """
 
+import shutil
 import sys
 from pathlib import Path
 
@@ -82,6 +83,24 @@ def plot_and_save_confusion_matrix(
     return output_path
 
 
+INDUSTRIAL_FOLDER_ORDER = [
+    "normal",
+    "defect_short",
+    "defect_open",
+    "defect_missing_hole",
+    "defect_spurious",
+]
+
+
+class IndustrialImageFolder(ImageFolder):
+    """ImageFolder com ordenação canônica garantida para casar com CLASS_NAMES."""
+
+    def find_classes(self, directory: str | Path) -> tuple[list[str], dict[str, int]]:
+        classes = INDUSTRIAL_FOLDER_ORDER
+        class_to_idx = {c: i for i, c in enumerate(classes)}
+        return classes, class_to_idx
+
+
 def run_training_pipeline(
     epochs: int = 5,
     batch_size: int = 16,
@@ -98,9 +117,9 @@ def run_training_pipeline(
     models_dir = Path("models")
     models_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Datasets e DataLoaders
-    train_dataset = ImageFolder(root=str(train_dir), transform=get_train_transforms())
-    val_dataset = ImageFolder(root=str(val_dir), transform=get_inference_transforms())
+    # 1. Datasets e DataLoaders com mapeamento canônico
+    train_dataset = IndustrialImageFolder(root=str(train_dir), transform=get_train_transforms())
+    val_dataset = IndustrialImageFolder(root=str(val_dir), transform=get_inference_transforms())
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
@@ -114,7 +133,11 @@ def run_training_pipeline(
     model.to(device)
 
     criterion = nn.CrossEntropyLoss(label_smoothing=0.05)
-    optimizer = torch.optim.AdamW(model.classifier.parameters(), lr=learning_rate, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(
+        [p for p in model.parameters() if p.requires_grad],
+        lr=learning_rate,
+        weight_decay=1e-4,
+    )
 
     with mlflow.start_run(run_name="industrial_mobilenetv3_training") as run:
         run_id = run.info.run_id
@@ -234,6 +257,8 @@ def run_training_pipeline(
         quantized_onnx = models_dir / "candidate_quantized.onnx"
         export_to_onnx(model, candidate_onnx)
         quantize_onnx_model(candidate_onnx, quantized_onnx)
+        champion_path = models_dir / "champion.onnx"
+        shutil.copy2(quantized_onnx, champion_path)
         mlflow.log_artifact(str(quantized_onnx), artifact_path="edge_onnx")
 
         # 10. Benchmark de Latência (PyTorch vs ONNX Runtime)
@@ -274,4 +299,4 @@ def run_training_pipeline(
 
 
 if __name__ == "__main__":
-    run_training_pipeline(epochs=5, batch_size=16, learning_rate=1e-3)
+    run_training_pipeline(epochs=8, batch_size=16, learning_rate=1e-3)

@@ -111,35 +111,38 @@ class TelemetryManager:
 
     def get_stats(self) -> dict[str, Any]:
         """Calcula estatísticas agregadas da esteira lendo o Parquet via Polars."""
+        default_stats = {
+            "total_inspections": 0,
+            "defective_count": 0,
+            "defect_rate_pct": 0.0,
+            "unknown_anomalies_count": 0,
+            "operator_agreements_count": 0,
+            "operator_divergences_count": 0,
+            "pending_audits_count": 0,
+            "agreement_rate_pct": 100.0,
+            "requires_retrain_count": 0,
+            "latency_p95_ms": 0.0,
+            "active_champion": str(self.settings.MODEL_PATH),
+        }
+
         if not self.telemetry_file.exists():
-            return {
-                "total_inspections": 0,
-                "defective_count": 0,
-                "defect_rate_pct": 0.0,
-                "unknown_anomalies_count": 0,
-                "operator_agreements_count": 0,
-                "latency_p95_ms": 0.0,
-                "active_champion": str(self.settings.MODEL_PATH),
-            }
+            return default_stats
 
         try:
             df = pl.read_parquet(self.telemetry_file)
             total = df.height
             if total == 0:
-                return {
-                    "total_inspections": 0,
-                    "defective_count": 0,
-                    "defect_rate_pct": 0.0,
-                    "unknown_anomalies_count": 0,
-                    "operator_agreements_count": 0,
-                    "latency_p95_ms": 0.0,
-                    "active_champion": str(self.settings.MODEL_PATH),
-                }
+                return default_stats
 
             defective = df.filter(pl.col("is_defective")).height
             defect_rate = round((defective / total) * 100.0, 2)
             unknowns = df.filter(pl.col("is_unknown_anomaly")).height
-            agreements = df.filter(pl.col("operator_confirmed")).height
+            agreements = df.filter(pl.col("operator_confirmed") == True).height  # noqa: E712
+            divergences = df.filter(pl.col("operator_confirmed") == False).height  # noqa: E712
+            pending = total - (agreements + divergences)
+            total_audited = agreements + divergences
+            agreement_rate = round((agreements / total_audited) * 100.0, 1) if total_audited > 0 else 100.0
+            retrain_count = df.filter(pl.col("requires_retrain") == True).height  # noqa: E712
             lat_p95 = round(float(df["inference_time_ms"].quantile(0.95)), 2)
 
             return {
@@ -148,20 +151,57 @@ class TelemetryManager:
                 "defect_rate_pct": defect_rate,
                 "unknown_anomalies_count": unknowns,
                 "operator_agreements_count": agreements,
+                "operator_divergences_count": divergences,
+                "pending_audits_count": pending,
+                "agreement_rate_pct": agreement_rate,
+                "requires_retrain_count": retrain_count,
                 "latency_p95_ms": lat_p95,
                 "active_champion": str(self.settings.MODEL_PATH),
             }
         except Exception as exc:
             logger.error("Erro ao calcular estatísticas de telemetria", error=str(exc))
-            return {
-                "total_inspections": 0,
-                "defective_count": 0,
-                "defect_rate_pct": 0.0,
-                "unknown_anomalies_count": 0,
-                "operator_agreements_count": 0,
-                "latency_p95_ms": 0.0,
-                "active_champion": str(self.settings.MODEL_PATH),
-            }
+            return default_stats
+
+    def get_recent_audits(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Retorna os registros mais recentes de auditoria fabril e feedback do operador."""
+        if not self.telemetry_file.exists():
+            return []
+
+        try:
+            df = pl.read_parquet(self.telemetry_file)
+            if df.height == 0:
+                return []
+
+            recent_df = df.tail(limit).reverse()
+            records = []
+            for row in recent_df.iter_rows(named=True):
+                op_confirmed = row.get("operator_confirmed")
+                if op_confirmed is True:
+                    status_text = "CONFIRMADO"
+                elif op_confirmed is False:
+                    status_text = "DIVERGENCIA"
+                else:
+                    status_text = "PENDENTE"
+
+                records.append({
+                    "inference_id": row.get("inference_id"),
+                    "timestamp": row.get("timestamp"),
+                    "prediction": row.get("prediction"),
+                    "confidence": round(float(row.get("confidence", 0.0)), 4),
+                    "is_defective": bool(row.get("is_defective", False)),
+                    "is_unknown_anomaly": bool(row.get("is_unknown_anomaly", False)),
+                    "anomaly_score": round(float(row.get("anomaly_score", 0.0)), 4),
+                    "inference_time_ms": round(float(row.get("inference_time_ms", 0.0)), 2),
+                    "is_ood": bool(row.get("is_ood", False)),
+                    "operator_confirmed": op_confirmed,
+                    "operator_corrected_class": row.get("operator_corrected_class"),
+                    "requires_retrain": bool(row.get("requires_retrain", False)),
+                    "status": status_text,
+                })
+            return records
+        except Exception as exc:
+            logger.error("Erro ao ler auditorias recentes do Parquet", error=str(exc))
+            return []
 
 
 telemetry_manager = TelemetryManager()

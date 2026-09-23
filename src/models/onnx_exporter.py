@@ -33,12 +33,13 @@ def export_to_onnx(
     torch.onnx.export(
         model,
         dummy_input,
-        str(output_path),
+        str(output_path.resolve()),
         export_params=True,
         opset_version=opset_version,
         do_constant_folding=True,
         input_names=["input"],
         output_names=["logits"],
+        dynamo=False,
     )
 
     # Validação estrutural do grafo exportado
