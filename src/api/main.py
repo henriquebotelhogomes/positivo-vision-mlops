@@ -444,20 +444,32 @@ async def record_hitl_feedback(
 @app.get("/api/v1/telemetry/stats", response_model=TelemetryStatsResponse, tags=["Telemetry"])
 async def get_telemetry_stats() -> TelemetryStatsResponse:
     """Retorna estatísticas operacionais agregadas da esteira SMT lidas do stream Parquet."""
-    stats = telemetry_manager.get_stats()
-    return TelemetryStatsResponse(**stats)
+    try:
+        stats = telemetry_manager.get_stats()
+        return TelemetryStatsResponse(**stats)
+    except BaseException as exc:
+        logger.warning("Falha ao obter telemetria, retornando fallback seguro", error=str(exc))
+        return TelemetryStatsResponse(**telemetry_manager.get_default_stats())
 
 
 @app.get("/api/v1/telemetry/audits", response_model=AuditsResponse, tags=["Telemetry"])
 async def get_recent_audits(limit: int = 50) -> AuditsResponse:
     """Retorna o histórico detalhado de auditorias e validações humanas da esteira."""
-    stats = telemetry_manager.get_stats()
-    records = telemetry_manager.get_recent_audits(limit=limit)
-    return AuditsResponse(
-        total_returned=len(records),
-        stats=TelemetryStatsResponse(**stats),
-        records=[AuditRecord(**r) for r in records],
-    )
+    try:
+        stats = telemetry_manager.get_stats()
+        records = telemetry_manager.get_recent_audits(limit=limit)
+        return AuditsResponse(
+            total_returned=len(records),
+            stats=TelemetryStatsResponse(**stats),
+            records=[AuditRecord(**r) for r in records],
+        )
+    except BaseException as exc:
+        logger.warning("Falha ao obter auditorias, retornando fallback seguro", error=str(exc))
+        return AuditsResponse(
+            total_returned=0,
+            stats=TelemetryStatsResponse(**telemetry_manager.get_default_stats()),
+            records=[],
+        )
 
 
 @app.get("/api/v1/download-samples", tags=["Dataset"])
