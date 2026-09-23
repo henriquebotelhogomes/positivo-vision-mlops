@@ -44,15 +44,15 @@ WORKDIR /app
 # Copia o ambiente virtual compilado
 COPY --from=builder /build/.venv /app/.venv
 
-# Copia os artefatos do projeto
-COPY src/ /app/src/
-COPY models/ /app/models/
-COPY data/sample_pool/ /app/data/sample_pool/
-COPY pyproject.toml /app/pyproject.toml
+# Copia os artefatos do projeto com ownership direto de appuser
+COPY --chown=appuser:appuser src/ /app/src/
+COPY --chown=appuser:appuser models/ /app/models/
+COPY --chown=appuser:appuser data/sample_pool/ /app/data/sample_pool/
+COPY --chown=appuser:appuser pyproject.toml /app/pyproject.toml
 
-# Cria pasta de telemetria com permissões para appuser
+# Cria pasta de telemetria com permissões para appuser (evita chown no .venv pesado)
 RUN mkdir -p /app/data/telemetry && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app/data
 
 # Configura variáveis de ambiente
 ENV PATH="/app/.venv/bin:$PATH" \
