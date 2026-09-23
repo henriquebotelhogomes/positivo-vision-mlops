@@ -248,15 +248,15 @@
                 <!-- Industrial Inspection Viewport Canvas -->
                 <div class="relative flex-1 min-h-[480px] bg-slate-100/80 rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center p-3 industrial-grid group">
                     
-                    <!-- HUD da Câmera Industrial (Metadados Ópticos em Tempo Real) -->
-                    <div class="absolute top-2.5 left-3 text-[10px] font-mono text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">
+                    <!-- HUD da Câmera Industrial (Metadados Ópticos em Tempo Real - Sem Sobreposição) -->
+                    <div class="absolute top-2.5 left-3 text-[10px] font-mono text-slate-500 bg-white/90 px-2 py-0.5 rounded border border-slate-200 shadow-xs">
                         ÓPTICA: 1024x1024 px • SENSOR CCD • ZOOM 1.0x
                     </div>
-                    <div class="absolute top-2.5 right-3 text-[10px] font-mono text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">
-                        FPS: 60 • ESTAÇÃO: AOI-SMT-03
-                    </div>
-                    <div class="absolute bottom-2.5 left-3 text-[10px] font-mono text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-slate-200">
+                    <div class="absolute bottom-2.5 left-3 text-[10px] font-mono text-slate-500 bg-white/90 px-2 py-0.5 rounded border border-slate-200 shadow-xs">
                         COORDENADA: X: 142.5mm | Y: 88.2mm | Z: 12.0mm
+                    </div>
+                    <div class="absolute bottom-2.5 right-3 text-[10px] font-mono text-slate-500 bg-white/90 px-2 py-0.5 rounded border border-slate-200 shadow-xs">
+                        FPS: 60 • ESTAÇÃO: AOI-SMT-03
                     </div>
 
                     <!-- Retículo / Mira óptica de precisão -->
@@ -279,9 +279,10 @@
                         <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Clique em "Capturar Amostra da Esteira" para disparar o leitor óptico em tempo real</p>
                     </div>
 
-                    <!-- Anomaly Quarantine Badge -->
-                    <div id="quarantineBadge" class="absolute top-4 right-4 hidden px-3.5 py-1.5 rounded-md bg-amber-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-md z-20">
-                        ⚠️ Quarentena SMT: Anomalia Inédita
+                    <!-- Anomaly Quarantine Badge (Posicionado no Top-Right sem nenhum texto por baixo) -->
+                    <div id="quarantineBadge" class="absolute top-2.5 right-3 hidden px-3.5 py-1.5 rounded-md bg-amber-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1.5">
+                        <span>⚠️</span>
+                        <span>Quarentena SMT: Anomalia Inédita</span>
                     </div>
                 </div>
 
