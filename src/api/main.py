@@ -18,7 +18,8 @@ import numpy as np
 import onnxruntime as ort
 import torch
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
 from src.api.rate_limiter import rate_limiter
@@ -127,6 +128,21 @@ app.state.onnx_input_name = None
 app.state.pytorch_model = None
 app.state.gradcam = None
 app.state.anomaly_detector = None
+
+
+# Montagem do diretório de assets estáticos (Logos e Favicon)
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> FileResponse:
+    """Serve o favicon oficial da Positivo Tecnologia."""
+    favicon_file = STATIC_DIR / "favicon.png"
+    if favicon_file.exists():
+        return FileResponse(str(favicon_file), media_type="image/png")
+    raise HTTPException(status_code=404, detail="Favicon não encontrado")
 
 
 @app.get("/docs", include_in_schema=False)
