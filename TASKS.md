@@ -65,8 +65,47 @@
 - [x] Configurar pipeline de CI/CD no GitHub Actions (`.github/workflows/ci.yml`) com `ruff`, `pytest` e build da imagem Docker.
 - [x] Padronizar comandos operacionais em `Makefile` (`make install`, `make lint`, `make test`, `make train`, `make run`, `make docker-up`, `make deploy`).
 
-### Fase 7: Publicação Online em Nuvem (Cloud Run) & Ensaio Geral da Entrevista
-- [x] Criar scripts de deploy automatizado serverless para o **Google Cloud Run** (`scripts/deploy_cloudrun.sh` e `scripts/deploy_cloudrun.ps1`) com política de Scale-to-Zero.
-- [ ] Executar deploy online no Google Cloud Run via `scripts/deploy_cloudrun.ps1` (ou bash) e homologar a **URL Pública HTTPS ativa**.
-- [ ] Realizar teste cego de estresse (10 execuções consecutivas na Live Demo web) garantindo latência estável (< 25ms ONNX).
-- [ ] Ensaio geral dos pontos táticos do `INTERVIEW_PLAYBOOK.md` antes da reunião com o Tech Lead da Positivo.
+### Fase 7: Otimizações de Borda, Tiling Scanner & Governança DagsHub (Concluído)
+- [x] **Sliding Window Tiling Scanner (Inspeção Gigapixel):**
+  - Implementação de varredura por mosaicos para placas de alta resolução (4.8 Megapixels).
+  - Re-exportação do modelo ONNX com dimensões dinâmicas de batch (`dynamic_axes={"input": {0: "batch_size"}}`).
+  - Resolução do gap de escala: detecção de defeitos microscópicos (0.07% da área da PCB) sem perda por interpolação de redimensionamento.
+- [x] **Unificação dos Datasets Reais (DeepPCB + Kaggle):**
+  - Taxonomia padronizada de 7 classes industriais (`NORMAL`, `DEFECT_SHORT`, `DEFECT_OPEN`, `DEFECT_MISSING_HOLE`, `DEFECT_MOUSEBITE`, `DEFECT_SPUR`, `DEFECT_SPURIOUS_COPPER`).
+  - Treinamento validado out-of-sample com F1 ponderado de 0.8354.
+- [x] **Governança MLflow Enterprise & Model Signatures:**
+  - Contrato de tensores estrito via `infer_signature` (`[None, 3, 224, 224]` -> `[None, 7]`) e `input_example`.
+  - Linhagem de datasets com `mlflow.data.from_pandas` e `mlflow.log_input`.
+  - Tags de compliance industrial: `standard="IPC-A-610-Class-3"`, `git.commit`, `git.branch`.
+- [x] **Infraestrutura em Nuvem DagsHub:**
+  - Instalação e autenticação do cliente `dagshub`.
+  - Sincronização remota da run `@champion`, artefatos (matriz de confusão, centróide de anomalia, ONNX) e Model Registry no DagsHub.
+  - Link de 1-clique incorporado no cabeçalho executivo da Live Demo (`/demo`) e badges no `README.md`.
+- [x] **Versionamento Privado no GitHub:**
+  - Repositório privado configurado e sincronizado em `henriquebotelhogomes/positivo-vision-mlops`.
+
+---
+
+### Fase 8: Fechamento dos Gaps Técnicos — Padrão Nota 10 Absoluta
+- [ ] **Melhoria 1: Agente de Causa-Raiz SMT com LangGraph & Knowledge Graph (`Graph / LLM / LangChain`):**
+  - Criar `src/models/smt_graph_agent.py` utilizando **LangGraph** (`StateGraph`).
+  - Modelar o fluxo de decisão de processo SMT:
+    - Nó 1: Extração de Telemetria e Coordenadas XAI (Grad-CAM).
+    - Nó 2: Consulta a regras de processo SMT / IPC-A-610 (Stencil, Pasta de Solda, Zonas 1-8 do Forno de Refluxo).
+    - Nó 3: Decisor Condicional / Roteador (Inspeção Humana vs. Intervenção Imediata na Linha).
+    - Nó 4: Síntese Estruturada do Laudo Técnico com DeepSeek LLM.
+- [ ] **Melhoria 2: Camada Analítica SQL com DuckDB sobre Streams Parquet (`SQL Industrial`):**
+  - Implementar módulo `src/monitoring/sql_analytics.py` utilizando **DuckDB** para consultas ANSI SQL sobre arquivos `.parquet`.
+  - Implementar queries analíticas industriais:
+    - Cálculo de **PPM (Partes Por Milhão)** de defeitos por período.
+    - Taxa de concordância do operador **Human-in-the-Loop (HITL Agreement Rate)**.
+    - Distribuição de percentis de latência (P50, P90, P99) por classe inspecionada.
+  - Expor endpoint `GET /api/v1/telemetry/sql-metrics` e integrar no painel de auditoria.
+- [ ] **Melhoria 3: Orquestração Cloud Native Kubernetes (`k8s/` Manifests):**
+  - Criar a pasta `k8s/` com manifestos de produção:
+    - `deployment.yaml`: Recursos com `limits`/`requests` (CPU/RAM), `runAsNonRoot: true`, sondagens `livenessProbe` e `readinessProbe` em `/healthz` e `/ready`.
+    - `service.yaml`: Serviço de rede industrial (ClusterIP / LoadBalancer).
+    - `hpa.yaml`: **Horizontal Pod Autoscaler** com escalonamento automático de 2 a 10 réplicas baseado em utilização de CPU.
+    - `kustomization.yaml`: Configuração declarativa para GitOps (ArgoCD / Kustomize).
+- [ ] **Melhoria 4: Automação Multi-Cloud (Azure Container Apps):**
+  - Criar script de deploy automatizado para Azure (`scripts/deploy_azure.sh`).

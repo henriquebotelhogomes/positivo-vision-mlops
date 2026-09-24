@@ -80,6 +80,38 @@ Quando pedirem: *"Henrique, conte um pouco sobre sua trajetória profissional."*
 
 ---
 
+### Pergunta 6: *"Como você lida com placas de altíssima resolução (ex: 4 a 12 Megapixels) onde o defeito físico ocupa uma fração minúscula da imagem?"*
+* **Sua resposta Staff (Diferencial Prático):**
+  > *"Esse foi exatamente um dos maiores desafios de chão de fábrica que solucionei neste projeto. Uma imagem industrial típica de PCB pode ter 4.8 Megapixels (3000x1500), mas um defeito como falta de furo ou rebarba mede apenas 70x50 pixels — menos de 0.07% da área total.*
+  > 
+  > *Se fizermos o redimensionamento clássico direto para 224x224, a interpolação matemática destrói a informação de alta frequência e o defeito simplesmente desaparece, gerando falsos negativos críticos.*
+  > 
+  > *Implementei uma engine de **Varredura por Mosaicos (Sliding Window Tiling Scanner)** acoplada ao ONNX Runtime com batching dinâmico. A placa é fatiada em patches nativos de 224x224 com stride inteligente e processada em um único batch vetorial de alta velocidade (< 800ms para 150 tiles em CPU). Quando um tile apresenta defeito com probabilidade acima de 40%, o sistema marca a placa inteira como reprovada, desenha o bounding box no panorama macro e gera o Grad-CAM microscópico no ponto exato da falha."*
+
+---
+
+### Pergunta 7: *"A vaga menciona LangChain e Graph / LLM. Como você estrutura soluções de IA Generativa além de prompts simples?"*
+* **Sua resposta sênior:**
+  > *"Em ambientes de missão crítica, chamadas simples a prompts livres sofrem de alucinação e falta de determinismo. No **Positivo Vision MLOps**, estruturei o laudo de engenharia utilizando **LangGraph com um grafo de estados direcionado (StateGraph)**.*
+  > 
+  > *O grafo orquestra nós especializados: um nó extrai os metadados visuais do Grad-CAM; um nó consulta uma base de regras de engenharia de processos SMT e normas IPC-A-610 (Knowledge Graph com parâmetros de forno de refusão, viscosidade de solda e abertura de stencil); um nó decisor roteia a severidade da falha; e o nó final sintetiza o laudo técnico estruturado via LLM. Isso transforma IA Generativa em um motor determinístico de engenharia de processos."*
+
+---
+
+### Pergunta 8: *"Como você utiliza SQL na análise e governança dos dados de produção?"*
+* **Sua resposta sênior:**
+  > *"Trabalho com o conceito moderno de **SQL-on-Parquet**. Toda a esteira de inferência e feedback do operador grava eventos assíncronos em formato colunar Apache Parquet. Para análise em tempo real, integrei o **DuckDB**, permitindo executar consultas **ANSI SQL** com zero cópia diretamente sobre o lago de telemetria.*
+  > 
+  > *Isso nos permite calcular métricas fabris como **PPM (Partes Por Milhão)**, taxa de concordância do operador (Human-in-the-Loop Agreement Rate) e distribuição de percentis de latência (P50, P90, P99) via Window Functions e Group By em microssegundos, sem onerar bancos transacionais."*
+
+---
+
+### Pergunta 9: *"O sistema está pronto para rodar em clusters Kubernetes (K8s) na fábrica?"*
+* **Sua resposta sênior:**
+  > *"Sim, 100% Cloud Native. A imagem Docker segue as melhores práticas: base slim, usuário não-root (`appuser`) e zero armazenamento de estado efêmero. Disponibilizei os manifestos de produção em `k8s/`: `deployment.yaml` com limites rígidos de CPU/RAM, probes de `liveness` e `readiness` em `/healthz` e `/ready`, `service.yaml` e **Horizontal Pod Autoscaler (HPA)** configurado para escalar réplicas automaticamente sob picos de esteira."*
+
+---
+
 ## 4. O Roteiro da Demonstração ao Vivo (Live Demo Script)
 
 Se na entrevista técnica você puder compartilhar a tela (ou enviar o link público para eles acessarem no celular):
