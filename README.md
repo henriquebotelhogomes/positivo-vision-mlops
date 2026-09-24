@@ -22,7 +22,68 @@
 
 ---
 
-## 📌 1. Visão Geral do Projeto & Contexto de Negócio
+## 🎬 Demonstração do Sistema em Operação (Live Walkthrough)
+
+<div align="center">
+  <img src="screenshots/demo_walkthrough.gif" alt="Positivo Vision MLOps - Walkthrough da Linha de Produção" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+  <p><em>Fluxo operacional completo na Linha SMT: Sorteio de hardware, inferência ONNX ultrarrápida (&lt; 20ms), explicabilidade Grad-CAM (XAI), laudo técnico IPC-A-610 via LangGraph e telemetria analítica DuckDB SQL-on-Parquet.</em></p>
+</div>
+
+---
+
+## 📸 2. Galeria Visual & Evidências de Operação
+
+### 2.1 Inspeção Óptica em Tempo Real: Conforme vs. Defeito com Grad-CAM (XAI)
+A interface de bancada fabril permite ao operador de linha alternar instantaneamente entre a imagem real de alta resolução e o mapa de calor Grad-CAM, com cálculo de distância no espaço latente (*Open-Set Mahalanobis*) para identificação de defeitos inéditos.
+
+| PCB Aprovada: `CONFORME (PASS)` (< 20ms) | Detecção de Falha: `MORDEDURA DE TRILHA` com Grad-CAM |
+| :---: | :---: |
+| ![PCB Conforme](screenshots/01_dashboard_conforme.png) | ![PCB Defeito com Grad-CAM](screenshots/02_dashboard_defect_gradcam.png) |
+| *Inspeção sadia com 99.5% de confiança e telemetria colunar.* | *Localização do micro-defeito sobreposto e score de anomalia latente.* |
+
+---
+
+### 2.2 Diagnóstico de Causa-Raiz SMT & Agente LangGraph (IPC-A-610 Class 3)
+Ao identificar uma falha, o operador aciona o motor de inteligência multimodal. O agente LangGraph consulta o grafo de conhecimento normativo e gera um laudo estruturado de engenharia de processos com hipóteses em pasta de solda SAC305, alinhamento de stencil e zonas térmicas do forno de refluxo.
+
+<div align="center">
+  <img src="screenshots/03_smt_technical_report.png" alt="Laudo Técnico SMT IPC-A-610" width="85%" style="border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.12);" />
+  <p><em>Laudo técnico industrial renderizado com conformidade normativa, causa-raiz provável e plano de contenção corretiva imediata.</em></p>
+</div>
+
+---
+
+### 2.3 Telemetria Fabril em Parquet & Motor Analítico DuckDB (Seis Sigma PPM)
+Cada inspeção realizada na esteira grava assincronamente metadados industriais no arquivo colunar `inferences.parquet`. O painel analítico executa consultas ANSI SQL em tempo real via **DuckDB**, extraindo indicadores Seis Sigma de defeito por milhão (PPM) e percentis de latência de inferência (`P50`, `P90`, `P95`, `P99`).
+
+| Auditoria de Manufatura & Human-in-the-Loop | Analytics Seis Sigma com DuckDB SQL-on-Parquet |
+| :---: | :---: |
+| ![Auditoria Parquet](screenshots/04_audit_telemetry_duckdb.png) | ![DuckDB SQL Analytics](screenshots/05_duckdb_sql_analytics.png) |
+| *Stream colunar Parquet com taxas de concordância do operador.* | *Cálculo analítico direto no Parquet: PPM e percentis de SLA.* |
+
+---
+
+### 2.4 Governança Enterprise & Model Registry na Nuvem (MLflow / DagsHub)
+Rastreamento ponta a ponta dos ciclos de experimentação, parâmetros de quantização e promoção formal para produção utilizando Model Aliases (`@champion` vs. `@challenger`).
+
+| Rastreamento de Treinos & Métricas RMA | Model Registry Oficial com Alias `@champion` |
+| :---: | :---: |
+| ![MLflow Experiments](screenshots/07_mlflow_experiments.png) | ![MLflow Model Registry](screenshots/08_mlflow_model_governance.png) |
+| *Histórico de runs, curvas de perda, recall ponderado e artefatos.* | *Linhagem de versão, rastreabilidade de artefato e SLA de governança.* |
+
+---
+
+### 2.5 Documentação de API Interativa Moderna (Scalar)
+Substituição do Swagger UI legado pela especificação moderna **Scalar**, servida nativamente em `/docs`.
+
+<div align="center">
+  <img src="screenshots/06_scalar_api_docs.png" alt="Scalar API Documentation" width="85%" style="border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.12);" />
+  <p><em>Documentação interativa de alta performance gerada a partir dos contratos estritos Pydantic v2 do FastAPI.</em></p>
+</div>
+
+---
+
+## 📌 3. Visão Geral do Projeto & Contexto de Negócio
 
 Nas linhas de montagem da **Positivo Tecnologia** (fábricas de Curitiba, Manaus e Ilhéus), centenas de milhares de placas de circuito impresso (PCBs), módulos de memória e placas-mãe passam por esteiras SMT (*Surface Mount Technology*) em alta velocidade. A inspeção visual humana de defeitos microscópicos (pontes de solda, furos ausentes, trilhas rompidas ou mordidas de mouse) gera gargalos de ciclo, fadiga operacional e risco de devoluções por garantia (**RMA - Return Merchandise Authorization**).
 
@@ -41,7 +102,7 @@ O **Positivo Vision MLOps** é uma solução completa de engenharia de IA de pon
 
 ---
 
-## 🏛️ 2. Arquitetura do Sistema
+## 🏛️ 4. Arquitetura do Sistema
 
 ```mermaid
 flowchart TD
@@ -95,7 +156,7 @@ flowchart TD
 
 ---
 
-## 🛠️ 3. Stack Tecnológica & Princípios de Engenharia
+## 🛠️ 5. Stack Tecnológica & Princípios de Engenharia
 
 | Componente | Tecnologia | Papel na Solução |
 | :--- | :--- | :--- |
@@ -115,7 +176,7 @@ flowchart TD
 
 ---
 
-## 📂 4. Estrutura do Repositório
+## 📂 6. Estrutura do Repositório
 
 ```text
 positivo-vision-mlops/
@@ -138,6 +199,16 @@ positivo-vision-mlops/
 │   ├── champion.onnx            # Modelo ONNX otimizado e quantizado em produção
 │   ├── anomaly_centroid.npz     # Centróide e covariância para detecção Open-Set
 │   └── best_model.pt            # Checkpoint PyTorch para Grad-CAM e extração latente
+├── screenshots/                 # Evidências visuais, walkthrough animado e prints do MLflow
+│   ├── demo_walkthrough.gif     # Walkthrough animado da aplicação em operação (1.27 MB)
+│   ├── 01_dashboard_conforme.png # PCB aprovada com telemetria de alta velocidade (< 20ms)
+│   ├── 02_dashboard_defect_gradcam.png # Detecção de defeito com heatmap Grad-CAM e Open-Set
+│   ├── 03_smt_technical_report.png # Laudo Técnico Multimodal IPC-A-610 Class 3 via LangGraph
+│   ├── 04_audit_telemetry_duckdb.png # Modal de auditoria e telemetria colunar Parquet
+│   ├── 05_duckdb_sql_analytics.png # Motor analítico DuckDB ANSI SQL-on-Parquet (PPM Seis Sigma)
+│   ├── 06_scalar_api_docs.png   # Documentação moderna de API com Scalar
+│   ├── 07_mlflow_experiments.png # Rastreamento de métricas e parâmetros no MLflow
+│   └── 08_mlflow_model_governance.png # Governança de modelos e alias @champion no Registry
 ├── scripts/
 │   ├── deploy_cloudrun.sh       # Deploy automatizado no Google Cloud Run (Scale-to-Zero)
 │   ├── deploy_azure.sh          # Deploy automatizado no Azure Container Apps (Bash)
@@ -176,7 +247,7 @@ positivo-vision-mlops/
 
 ---
 
-## 🚀 5. Como Executar
+## 🚀 7. Como Executar
 
 ### Pré-requisitos
 * Python 3.12+ instalado.
@@ -234,7 +305,7 @@ kubectl get hpa -n positivo-vision
 
 ---
 
-## 🌐 6. Endpoints & Serviços Disponíveis
+## 🌐 8. Endpoints & Serviços Disponíveis
 
 | Serviço | Rota / URL Online (Cloud Run) | Rota Local | Descrição |
 | :--- | :--- | :--- | :--- |
@@ -249,7 +320,7 @@ kubectl get hpa -n positivo-vision
 
 ---
 
-## 💬 7. Exemplos de Consumo da API via CLI
+## 💬 9. Exemplos de Consumo da API via CLI
 
 ### Consultar Métricas Seis Sigma (DuckDB sobre Parquet):
 ```bash
@@ -299,7 +370,7 @@ curl -X POST http://localhost:8000/api/v1/generate-report \
 
 ---
 
-## 🏆 8. Cobertura dos Requisitos da Vaga (Nota 10/10)
+## 🏆 10. Cobertura dos Requisitos da Vaga (Nota 10/10)
 
 | Requisito do Edital Positivo | Solução Implementada no Repositório | Evidência no Código |
 | :--- | :--- | :--- |
@@ -314,5 +385,5 @@ curl -X POST http://localhost:8000/api/v1/generate-report \
 
 ---
 
-## 📜 Licença & Conformidade
+## 📜 11. Licença & Conformidade
 Este projeto foi desenvolvido estritamente para demonstração de excelência técnica e competências de engenharia sênior. Os dados utilizados provêm de benchmarks públicos de pesquisa em visão computacional e as análises normativas são fundamentadas no padrão industrial **IPC-A-610 Class 3**.
