@@ -35,6 +35,9 @@ class PredictionResponse(BaseModel):
     model_version: str = Field(default="v1", description="Versão do modelo registrada no MLflow")
     model_alias: str = Field(default="@champion", description="Alias de governança ativo")
     gradcam_base64: str = Field(description="Mapa de calor Grad-CAM sobreposto codificado em Base64")
+    original_image_base64: str | None = Field(
+        default=None, description="Imagem da placa em Base64 (original ou anotada com retículo de defeito)"
+    )
     ood_flags: OODFlagsSchema = Field(description="Métricas de integridade de sinal da imagem")
     timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
@@ -43,7 +46,6 @@ class RandomSampleResponse(PredictionResponse):
     """Resposta estendida para o sorteio de amostras industriais da Live Demo."""
 
     sample_name: str = Field(description="Nome do arquivo da amostra industrial no pool")
-    original_image_base64: str = Field(description="Imagem original da placa em Base64")
 
 
 class TechnicalReportRequest(BaseModel):

@@ -986,14 +986,19 @@
                 }
                 const data = await res.json();
                 
-                // Lê arquivo original como Base64 para visualização dual
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    data.original_image_base64 = e.target.result;
+                // Usa imagem anotada pelo backend com retículo de defeito, ou arquivo original
+                if (!data.original_image_base64) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        data.original_image_base64 = e.target.result;
+                        renderInspectionResult(data);
+                        updateTelemetryStats();
+                    };
+                    reader.readAsDataURL(file);
+                } else {
                     renderInspectionResult(data);
                     updateTelemetryStats();
-                };
-                reader.readAsDataURL(file);
+                }
             } catch (err) {
                 alert('Erro ao processar imagem de upload.');
             } finally {
@@ -1054,8 +1059,9 @@
                 banner.classList.add('bg-rose-50', 'border', 'border-rose-300', 'border-l-4', 'border-l-rose-600');
                 title.innerText = 'REPROVADA: ' + formatClassName(data.prediction);
                 title.className = 'text-base font-extrabold text-rose-900 tracking-tight';
-                subtitle.innerText = 'Confiança de ' + (data.confidence * 100).toFixed(1) + '% no diagnóstico de não-conformidade';
-                subtitle.className = 'text-xs text-rose-700 mt-1';
+                const modeMsg = (data.engine && data.engine.includes("tiled")) ? " • Varredura por Mosaico (Tiling Scanner)" : "";
+                subtitle.innerText = "Confiança de " + (data.confidence * 100).toFixed(1) + "% no diagnóstico de não-conformidade" + modeMsg;
+                subtitle.className = "text-xs text-rose-700 mt-1";
             } else {
                 banner.classList.add('bg-emerald-50', 'border', 'border-emerald-300', 'border-l-4', 'border-l-emerald-600');
                 title.innerText = 'APROVADA: CONFORME (PASS)';

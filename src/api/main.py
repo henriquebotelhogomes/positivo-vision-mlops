@@ -21,7 +21,7 @@ import torch
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from src.api.rate_limiter import rate_limiter
 from src.api.schemas import (
@@ -196,6 +196,135 @@ async def demo_interface() -> HTMLResponse:
     return HTMLResponse(content=demo_file.read_text(encoding="utf-8"))
 
 
+def _run_sliding_window_inference(
+    pil_image: Image.Image,
+    app_state: Any,
+) -> dict[str, Any]:
+    """Executa varredura por blocos ópticos (Sliding Window / Tiling) em imagens de alta resolução."""
+    if getattr(app_state, "onnx_session", None) is None:
+        load_model_engine(app_state)
+
+    inference_id = f"inf_{uuid.uuid4().hex[:8]}"
+    ood_result = check_out_of_distribution(pil_image)
+
+    w, h = pil_image.size
+    tile_size = 224
+    # Stride adaptativo para manter acurácia e latência rápida
+    stride = 180 if max(w, h) > 2200 else (140 if max(w, h) > 1000 else 112)
+
+    x_coords = sorted(list(set(list(range(0, w - tile_size, stride)) + [max(0, w - tile_size)])))
+    y_coords = sorted(list(set(list(range(0, h - tile_size, stride)) + [max(0, h - tile_size)])))
+
+    transform = get_inference_transforms(img_size=tile_size)
+    tiles_pil = []
+    tiles_tensors = []
+    coords = []
+
+    for y in y_coords:
+        for x in x_coords:
+            crop = pil_image.crop((x, y, x + tile_size, y + tile_size))
+            tiles_pil.append(crop)
+            tiles_tensors.append(transform(crop))
+            coords.append((x, y))
+
+    batch = torch.stack(tiles_tensors).numpy().astype(np.float32)
+
+    t0 = time.perf_counter()
+    if app_state.onnx_session is not None:
+        outputs = app_state.onnx_session.run(None, {app_state.onnx_input_name: batch})
+        logits = outputs[0]
+    else:
+        with torch.no_grad():
+            logits = app_state.pytorch_model(torch.tensor(batch)).numpy()
+    latency_ms = (time.perf_counter() - t0) * 1000.0
+
+    exp_logits = np.exp(logits - np.max(logits, axis=1, keepdims=True))
+    probs = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
+
+    defect_candidates = []
+    for i in range(len(tiles_pil)):
+        p = probs[i]
+        cls_idx = int(np.argmax(p))
+        cls_name = CLASS_NAMES[cls_idx]
+        if cls_name != "NORMAL" and p[cls_idx] >= 0.40:
+            defect_candidates.append({
+                "tile_idx": i,
+                "class": cls_name,
+                "confidence": float(p[cls_idx]),
+                "probs": p,
+                "coord": coords[i],
+            })
+
+    if defect_candidates:
+        # Prioriza missing hole se detectado, ou o defeito com maior confiança geral
+        missing_holes = [c for c in defect_candidates if c["class"] == "DEFECT_MISSING_HOLE"]
+        if missing_holes:
+            best = max(missing_holes, key=lambda c: c["confidence"])
+        else:
+            best = max(defect_candidates, key=lambda c: c["confidence"])
+
+        pred_class = best["class"]
+        confidence = best["confidence"]
+        prob_dict = {CLASS_NAMES[k]: round(float(best["probs"][k]), 4) for k in range(len(CLASS_NAMES))}
+        is_defective = True
+        best_idx = best["tile_idx"]
+        winning_tile = tiles_pil[best_idx]
+        winning_coord = best["coord"]
+
+        # 1. Grad-CAM focado no bloco onde o defeito físico reside
+        winning_tensor = tiles_tensors[best_idx].unsqueeze(0)
+        pred_idx = CLASS_NAMES.index(pred_class)
+        try:
+            heatmap = app_state.gradcam.generate_heatmap(winning_tensor, class_idx=pred_idx)
+            overlay_pil = app_state.gradcam.overlay_on_image(winning_tile, heatmap, alpha=0.65, threshold=0.25)
+            gradcam_base64 = GradCAM.pil_to_base64(overlay_pil, format="JPEG")
+        except Exception as exc:
+            logger.warning("Falha ao gerar Grad-CAM no tile", error=str(exc))
+            gradcam_base64 = GradCAM.pil_to_base64(winning_tile, format="JPEG")
+
+        # 2. Imagem macro anotada com mira/retículo vermelho no local do defeito
+        macro_annotated = pil_image.copy()
+        draw = ImageDraw.Draw(macro_annotated)
+        bx, by = winning_coord
+        draw.rectangle([bx, by, bx + tile_size, by + tile_size], outline="red", width=8)
+        original_base64 = GradCAM.pil_to_base64(macro_annotated, format="JPEG")
+
+    else:
+        pred_class = "NORMAL"
+        mean_probs = np.mean(probs, axis=0)
+        confidence = float(mean_probs[0])
+        prob_dict = {CLASS_NAMES[k]: round(float(mean_probs[k]), 4) for k in range(len(CLASS_NAMES))}
+        is_defective = False
+        original_base64 = GradCAM.pil_to_base64(pil_image, format="JPEG")
+
+        center_idx = len(tiles_pil) // 2
+        center_tile = tiles_pil[center_idx]
+        center_tensor = tiles_tensors[center_idx].unsqueeze(0)
+        try:
+            heatmap = app_state.gradcam.generate_heatmap(center_tensor, class_idx=0)
+            overlay_pil = app_state.gradcam.overlay_on_image(center_tile, heatmap, alpha=0.65, threshold=0.25)
+            gradcam_base64 = GradCAM.pil_to_base64(overlay_pil, format="JPEG")
+        except Exception:
+            gradcam_base64 = GradCAM.pil_to_base64(center_tile, format="JPEG")
+
+    return {
+        "inference_id": inference_id,
+        "prediction": pred_class,
+        "confidence": round(confidence, 4),
+        "is_defective": is_defective,
+        "is_unknown_anomaly": False,
+        "anomaly_score": 0.0,
+        "probabilities": prob_dict,
+        "inference_time_ms": round(latency_ms, 2),
+        "engine": "onnxruntime-cpu (tiled)" if app_state.onnx_session else "pytorch-cpu",
+        "model_version": "v1",
+        "model_alias": settings.MODEL_ALIAS,
+        "gradcam_base64": gradcam_base64,
+        "original_image_base64": original_base64,
+        "ood_flags": ood_result,
+    }
+
+
 def _run_core_inference(
     pil_image: Image.Image,
     app_state: Any,
@@ -203,6 +332,11 @@ def _run_core_inference(
     """Executa a triagem OOD, inferência ONNX, Anomaly Head e Grad-CAM em uma imagem PIL."""
     if getattr(app_state, "onnx_session", None) is None:
         load_model_engine(app_state)
+
+    # Para placas macro de alta resolução, ativa o Tiling Scanner
+    w, h = pil_image.size
+    if w > 320 or h > 320:
+        return _run_sliding_window_inference(pil_image, app_state)
 
     inference_id = f"inf_{uuid.uuid4().hex[:8]}"
 
@@ -271,6 +405,7 @@ def _run_core_inference(
         "model_version": "v1",
         "model_alias": settings.MODEL_ALIAS,
         "gradcam_base64": gradcam_base64,
+        "original_image_base64": GradCAM.pil_to_base64(pil_image, format="JPEG"),
         "ood_flags": ood_result,
     }
 
@@ -394,9 +529,9 @@ async def predict_random_sample(
         is_ood=result["ood_flags"]["is_ood"],
     )
 
+    result["original_image_base64"] = original_base64
     return RandomSampleResponse(
         sample_name=chosen_path.name,
-        original_image_base64=original_base64,
         **result,
     )
 

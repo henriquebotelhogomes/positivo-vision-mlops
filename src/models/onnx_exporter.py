@@ -39,6 +39,7 @@ def export_to_onnx(
         do_constant_folding=True,
         input_names=["input"],
         output_names=["logits"],
+        dynamic_axes={"input": {0: "batch_size"}, "logits": {0: "batch_size"}},
         dynamo=False,
     )
 
