@@ -1,8 +1,14 @@
-<#
-.SYNOPSIS
-    Script de Deploy Automatizado Serverless no Google Cloud Run (PowerShell)
-    FinOps: Scale-to-Zero ($0/mês ocioso), 1 vCPU, 1Gi RAM, Max 2 instâncias
-#>
+# ==============================================================================
+# Script de Deploy Automatizado Serverless no Google Cloud Run (PowerShell)
+# FinOps: Scale-to-Zero ($0/mês ocioso), 1 vCPU, 1Gi RAM, Max 2 instâncias
+# ==============================================================================
+
+[CmdletBinding()]
+param (
+    [string]$ProjectID = "retainiq-prod",
+    [string]$Region = "us-central1",
+    [string]$ServiceName = "positivo-vision"
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -10,44 +16,35 @@ Write-Host "==================================================================" 
 Write-Host "🚀 Iniciando Deploy Serverless: Positivo Vision MLOps (Cloud Run)" -ForegroundColor Cyan
 Write-Host "==================================================================" -ForegroundColor Cyan
 
-# 1. Validação de pré-requisitos
+# 1. Valida existência da CLI gcloud
 if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
-    Write-Error "❌ Erro: CLI 'gcloud' não encontrada no PATH. Instale o Google Cloud SDK."
+    Write-Error "❌ CLI 'gcloud' não encontrada no PATH do sistema. Instale o Google Cloud SDK."
     exit 1
 }
 
-$ProjectId = $env:GCP_PROJECT_ID
-if (-not $ProjectId) {
-    $CurrentProject = (& gcloud config get-value project 2>$null).Trim()
-    if ($CurrentProject -and $CurrentProject -ne "(unset)") {
-        $ProjectId = $CurrentProject
-    } else {
-        $ProjectId = Read-Host "Digite o ID do Projeto Google Cloud (ex: positivo-vision-demo)"
-        & gcloud config set project $ProjectId
-    }
-}
+# 2. Configura projeto ativo
+Write-Host "📌 Configurando projeto ativo: $ProjectID..." -ForegroundColor Yellow
+& gcloud config set project $ProjectID
 
-$Region = if ($env:GCP_REGION) { $env:GCP_REGION } else { "us-central1" }
-$ServiceName = "positivo-vision"
-$ImageTag = "gcr.io/${ProjectId}/${ServiceName}:latest"
+$ImageTag = "gcr.io/$ProjectID/$ServiceName`:latest"
 
-Write-Host "📌 Projeto GCP: $ProjectId" -ForegroundColor Yellow
-Write-Host "📌 Região:      $Region" -ForegroundColor Yellow
-Write-Host "📌 Serviço:     $ServiceName" -ForegroundColor Yellow
-Write-Host "📌 Imagem:      $ImageTag" -ForegroundColor Yellow
+Write-Host "📌 Projeto GCP: $ProjectID" -ForegroundColor Green
+Write-Host "📌 Região:      $Region" -ForegroundColor Green
+Write-Host "📌 Serviço:     $ServiceName" -ForegroundColor Green
+Write-Host "📌 Imagem:      $ImageTag" -ForegroundColor Green
 Write-Host "------------------------------------------------------------------"
 
-# 2. Habilita APIs necessárias no GCP
-Write-Host "⚙️  Verificando e habilitando APIs requeridas (Cloud Run & Cloud Build)..." -ForegroundColor Green
-& gcloud services enable run.googleapis.com cloudbuild.googleapis.com containerregistry.googleapis.com
-
 # 3. Compilação do container na nuvem via Cloud Build
-Write-Host "📦 Compilando imagem de produção via Google Cloud Build..." -ForegroundColor Green
+Write-Host "📦 Compilando imagem de produção via Google Cloud Build..." -ForegroundColor Yellow
 & gcloud builds submit --tag $ImageTag .
 
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "❌ Falha ao compilar a imagem no Cloud Build."
+    exit 1
+}
+
 # 4. Deploy no Cloud Run com política Scale-to-Zero
-Write-Host "🚀 Publicando microsserviço no Google Cloud Run..." -ForegroundColor Green
-$ApiKey = if ($env:OPENCODE_API_KEY) { $env:OPENCODE_API_KEY } else { "" }
+Write-Host "🚀 Publicando microsserviço no Google Cloud Run..." -ForegroundColor Yellow
 & gcloud run deploy $ServiceName `
   --image $ImageTag `
   --region $Region `
@@ -58,15 +55,24 @@ $ApiKey = if ($env:OPENCODE_API_KEY) { $env:OPENCODE_API_KEY } else { "" }
   --min-instances 0 `
   --max-instances 2 `
   --port 8000 `
-  --set-env-vars APP_ENV=production,PORT=8000,OPENCODE_API_KEY=$ApiKey
+  --set-env-vars "APP_ENV=production,PORT=8000"
 
-# 5. Obtém e exibe a URL pública ativa
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "❌ Falha no deploy do Cloud Run."
+    exit 1
+}
+
+# 5. Obtém a URL pública do serviço
 $ServiceUrl = (& gcloud run services describe $ServiceName --region $Region --format "value(status.url)").Trim()
 
 Write-Host "==================================================================" -ForegroundColor Green
 Write-Host "🎉 DEPLOY CONCLUÍDO COM SUCESSO!" -ForegroundColor Green
-Write-Host "🌐 URL Pública da Demonstração: ${ServiceUrl}/demo" -ForegroundColor Cyan
-Write-Host "📄 Documentação Scalar (OpenAPI): ${ServiceUrl}/docs" -ForegroundColor Cyan
-Write-Host "🩺 Healthcheck Probe:          ${ServiceUrl}/healthz" -ForegroundColor Cyan
-Write-Host "💰 Custo quando ocioso:         `$0.00 / mês (Scale-to-Zero garantido)" -ForegroundColor Yellow
 Write-Host "==================================================================" -ForegroundColor Green
+Write-Host "🌐 URL Pública:    $ServiceUrl" -ForegroundColor Cyan
+Write-Host "📱 Live Demo UI:   $ServiceUrl/demo" -ForegroundColor Cyan
+Write-Host "📑 Scalar Docs:    $ServiceUrl/docs" -ForegroundColor Cyan
+Write-Host "🏥 Health Check:   $ServiceUrl/healthz" -ForegroundColor Cyan
+Write-Host "📊 SQL Seis Sigma: $ServiceUrl/api/v1/telemetry/sql-metrics" -ForegroundColor Cyan
+Write-Host "------------------------------------------------------------------"
+Write-Host "💡 FinOps: Scale-to-Zero ATIVO (--min-instances 0)." -ForegroundColor Magenta
+Write-Host "   Custo de ociosidade: \$0,00 / mês." -ForegroundColor Magenta

@@ -15,6 +15,7 @@ htmlcov/
 # Dados brutos de treinamento e logs pesados
 data/raw/
 data/telemetry/*
+!data/telemetry/inferences.parquet
 !data/sample_pool/
 mlruns/
 mlflow.db
