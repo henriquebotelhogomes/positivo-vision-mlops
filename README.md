@@ -240,7 +240,6 @@ positivo-vision-mlops/
 ├── pyproject.toml               # Manifesto PEP 621 com dependências controladas
 ├── uv.lock                      # Lockfile determinístico uv
 ├── PROJECT_SPEC.md              # Especificação técnica enterprise do projeto
-├── INTERVIEW_PLAYBOOK.md        # Playbook executivo com perguntas de alto calibre
 ├── TASKS.md                     # Rastreamento completo de fases do projeto
 └── README.md                    # Este documento
 ```
@@ -381,7 +380,7 @@ curl -X POST http://localhost:8000/api/v1/generate-report \
 | **Cloud, K8s & Arquitetura** | Manifests Kubernetes completos (`k8s/`), HPA e Multi-Cloud | [`k8s/`](k8s/), [`scripts/deploy_azure.sh`](scripts/deploy_azure.sh), [`scripts/deploy_cloudrun.sh`](scripts/deploy_cloudrun.sh) |
 | **Monitoramento de Custos & FinOps** | Rate limiting por IP (25/2h) e Scale-to-Zero em Nuvem Serverless | [`src/api/main.py`](src/api/main.py), [`scripts/deploy_azure.sh`](scripts/deploy_azure.sh) |
 | **Segurança & Governança** | Usuário `non-root (10001)`, auditoria HITL e segregação k8s | [`Dockerfile`](Dockerfile), [`k8s/deployment.yaml`](k8s/deployment.yaml) |
-| **Referência Técnica & System Design**| Playbook tático executivo com 9 perguntas de alto calibre | [`INTERVIEW_PLAYBOOK.md`](INTERVIEW_PLAYBOOK.md), [`PROJECT_SPEC.md`](PROJECT_SPEC.md) |
+| **Referência Técnica & System Design**| Especificação técnica com arquitetura e system design industrial | [`PROJECT_SPEC.md`](PROJECT_SPEC.md) |
 
 ---
 

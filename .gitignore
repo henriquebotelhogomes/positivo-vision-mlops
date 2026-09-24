@@ -34,3 +34,7 @@ scratch/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Documentos Locais / Confidenciais
+INTERVIEW_PLAYBOOK.md
+
