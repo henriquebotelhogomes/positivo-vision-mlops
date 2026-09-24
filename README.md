@@ -1,7 +1,14 @@
 # 🏭 Positivo Vision MLOps: Inspeção Visual Automatizada, Otimização de Borda & Governança
 
+[![DagsHub](https://img.shields.io/badge/MLflow-DagsHub%20Cloud-0072CE?style=for-the-badge&logo=mlflow&logoColor=white)](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow)
+[![Model Registry](https://img.shields.io/badge/Model%20Registry-@champion-success?style=for-the-badge&logo=pytorch)](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow/#/models/positivo-pcb-vision)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![ONNX Runtime](https://img.shields.io/badge/ONNX%20Runtime-Edge%20Inference-005CED?style=for-the-badge)](https://onnxruntime.ai/)
+
 > **Sistema Industrial de MLOps & Visão Computacional para Linhas de Montagem (Padrão Staff / Global Scale-up)**  
 > **Target:** Positivo Tecnologia (POSI3) — Desenvolvedor de IA Sênior (Remoto / CLT).  
+> **MLflow na Nuvem:** [DagsHub Remote Tracking](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow)  
 > **Hospedagem Online:** Google Cloud Run (Serverless / Scale-to-Zero).
 
 ---
@@ -133,6 +140,8 @@ docker compose up -d
 
 ### Acesso aos Serviços:
 * **Interface da Live Demo:** `http://localhost:8000/demo` (ou link público no Cloud Run)
+* **MLflow na Nuvem (DagsHub):** [https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow)
+* **Model Registry Oficial:** [Modelo `positivo-pcb-vision` (@champion)](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow/#/models/positivo-pcb-vision)
+* **MLflow Local:** `http://localhost:5000` (quando executado localmente)
 * **Documentação Interativa Scalar:** `http://localhost:8000/docs`
-* **MLflow Tracking UI:** `http://localhost:5000`
 * **Probes de Saúde:** `http://localhost:8000/healthz` e `http://localhost:8000/ready`
