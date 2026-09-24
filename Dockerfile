@@ -6,7 +6,7 @@
 # Stage 1: Build Dependencies via uv
 FROM python:3.12-slim AS builder
 
-WORKDIR /build
+WORKDIR /app
 
 # Instala curl para baixar uv ou copia o binário oficial do uv
 COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /bin/uv
@@ -42,7 +42,7 @@ RUN groupadd -g 10001 appuser && \
 WORKDIR /app
 
 # Copia o ambiente virtual compilado
-COPY --from=builder /build/.venv /app/.venv
+COPY --from=builder /app/.venv /app/.venv
 
 # Copia os artefatos do projeto com ownership direto de appuser
 COPY --chown=appuser:appuser src/ /app/src/
@@ -67,9 +67,9 @@ USER appuser
 
 # Healthcheck em conformidade com o padrão Cloud Native
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/healthz || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/healthz || exit 1
 
 EXPOSE 8000
 
 # Execução assíncrona com suporte dinâmico ao $PORT do Cloud Run
-CMD ["sh", "-c", "exec uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
+CMD ["sh", "-c", "exec /app/.venv/bin/python -m uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
