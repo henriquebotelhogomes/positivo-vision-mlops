@@ -10,6 +10,8 @@
     <link rel="apple-touch-icon" href="/static/favicon.png">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js CDN para formatação profissional de Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -199,6 +201,72 @@
             background-image: 
                 linear-gradient(to right, rgba(0, 114, 206, 0.06) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(0, 114, 206, 0.06) 1px, transparent 1px);
+        }
+
+        /* Tipografia Corporativa do Laudo Markdown SMT */
+        .markdown-report h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0F172A;
+            margin-top: 0.25rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .markdown-report h4 {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #0072CE;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        .markdown-report p {
+            margin-bottom: 0.65rem;
+            line-height: 1.6;
+            color: #334155;
+        }
+        .markdown-report hr {
+            border: 0;
+            border-top: 1px solid #E2E8F0;
+            margin: 1rem 0;
+        }
+        .markdown-report ul {
+            list-style-type: disc;
+            padding-left: 1.25rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.75rem;
+            color: #334155;
+        }
+        .markdown-report ol {
+            list-style-type: decimal;
+            padding-left: 1.25rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.75rem;
+            color: #334155;
+        }
+        .markdown-report li {
+            margin-bottom: 0.35rem;
+            line-height: 1.55;
+        }
+        .markdown-report strong {
+            font-weight: 700;
+            color: #0F172A;
+        }
+        .markdown-report em {
+            font-style: italic;
+            color: #475569;
+        }
+        .markdown-report code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.25rem;
+            background-color: #F1F5F9;
+            border: 1px solid #CBD5E1;
+            color: #002F6C;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -545,7 +613,7 @@
                 <button onclick="closeReportModal()" class="w-8 h-8 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition">✕</button>
             </div>
             
-            <div class="p-6 overflow-y-auto space-y-4 text-sm font-sans text-slate-700 leading-relaxed" id="reportContent">
+            <div class="p-6 overflow-y-auto space-y-4 text-sm font-sans text-slate-700 leading-relaxed markdown-report" id="reportContent">
                 <!-- Populated via Markdown -->
             </div>
 
@@ -1367,17 +1435,8 @@
                 }
                 const data = await res.json();
                 
-                // Formatação simples de Markdown para HTML corporativo
-                let formatted = data.report_markdown
-                    .replace(/### (.*?)\n/g, '<h4 class="text-base font-bold text-slate-900 mt-3 mb-1">$1</h4>')
-                    .replace(/#### (.*?)\n/g, '<h5 class="text-xs font-bold text-positivo-blue mt-3 mb-1 uppercase tracking-wider">$1</h5>')
-                    .replace(/^#+\s*$/gm, '')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-900 font-semibold">$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em class="text-slate-600">$1</em>')
-                    .replace(/\n\n/g, '<p class="mb-2"></p>')
-                    .replace(/\n/g, '<br>');
-
-                document.getElementById('reportContent').innerHTML = formatted;
+                // Renderização robusta de Markdown corporativo com marked.js + fallback industrial
+                document.getElementById('reportContent').innerHTML = renderMarkdownReport(data.report_markdown);
                 document.getElementById('reportSourceBadge').innerText = 'Motor: ' + data.model + ' (' + data.source + ')';
                 document.getElementById('modalReport').classList.remove('hidden');
             } catch (err) {
@@ -1393,6 +1452,129 @@
 
         function closeReportModal() {
             document.getElementById('modalReport').classList.add('hidden');
+        }
+
+        // =========================================================================
+        // Motor de Renderização Markdown SMT (Híbrido: marked.js + Fallback Offline)
+        // =========================================================================
+        function renderMarkdownReport(rawMarkdown) {
+            if (!rawMarkdown) return '';
+
+            let html = '';
+            // 1. Tenta usar marked.js se disponível
+            if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+                try {
+                    html = marked.parse(rawMarkdown);
+                } catch (e) {
+                    html = parseMarkdownIndustrial(rawMarkdown);
+                }
+            } else {
+                html = parseMarkdownIndustrial(rawMarkdown);
+            }
+
+            // 2. Badges dinâmicos corporativos para severidade e roteamento SMT
+            const badges = {
+                'CRÍTICA': '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-rose-100 text-rose-800 border border-rose-200">CRÍTICA</span>',
+                'CRITICA': '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-rose-100 text-rose-800 border border-rose-200">CRÍTICA</span>',
+                'ALTA': '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-amber-100 text-amber-800 border border-amber-200">ALTA</span>',
+                'MÉDIA': '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200">MÉDIA</span>',
+                'MEDIA': '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200">MÉDIA</span>',
+                'BAIXA': '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">BAIXA</span>',
+                'QUARENTENA_IMEDIATA_LOTE': '<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-rose-600 text-white shadow-xs">QUARENTENA_IMEDIATA_LOTE</span>',
+                'INTERVENCAO_FORNO_STENCIL': '<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-amber-600 text-white shadow-xs">INTERVENCAO_FORNO_STENCIL</span>',
+                'LIBERADO_RETRABALHO': '<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-indigo-600 text-white shadow-xs">LIBERADO_RETRABALHO</span>',
+                'APROVADO_LINHA': '<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-emerald-600 text-white shadow-xs">APROVADO_LINHA</span>'
+            };
+
+            for (const [key, badge] of Object.entries(badges)) {
+                html = html.split(`<code>${key}</code>`).join(badge);
+            }
+
+            return html;
+        }
+
+        function parseMarkdownIndustrial(md) {
+            const lines = md.split('\n');
+            const out = [];
+            let inList = false;
+            let listType = null; // 'ul' | 'ol'
+
+            const closeList = () => {
+                if (inList) {
+                    out.push(listType === 'ul' ? '</ul>' : '</ol>');
+                    inList = false;
+                    listType = null;
+                }
+            };
+
+            for (let rawLine of lines) {
+                const line = rawLine.trimEnd();
+
+                // Separador horizontal
+                if (/^---+\s*$/.test(line)) {
+                    closeList();
+                    out.push('<hr class="my-4 border-slate-200">');
+                    continue;
+                }
+
+                // Títulos H3 e H4
+                if (line.startsWith('### ')) {
+                    closeList();
+                    out.push(`<h3>${formatInline(line.slice(4))}</h3>`);
+                    continue;
+                }
+                if (line.startsWith('#### ')) {
+                    closeList();
+                    out.push(`<h4>${formatInline(line.slice(5))}</h4>`);
+                    continue;
+                }
+
+                // Listas não-ordenadas (* ou -)
+                const ulMatch = line.match(/^(\*|-)\s+(.*)$/);
+                if (ulMatch) {
+                    if (!inList || listType !== 'ul') {
+                        closeList();
+                        out.push('<ul class="space-y-1.5 my-2">');
+                        inList = true;
+                        listType = 'ul';
+                    }
+                    out.push(`<li>${formatInline(ulMatch[2])}</li>`);
+                    continue;
+                }
+
+                // Listas ordenadas (1. item)
+                const olMatch = line.match(/^(\d+)\.\s+(.*)$/);
+                if (olMatch) {
+                    if (!inList || listType !== 'ol') {
+                        closeList();
+                        out.push('<ol class="space-y-1.5 my-2">');
+                        inList = true;
+                        listType = 'ol';
+                    }
+                    out.push(`<li>${formatInline(olMatch[2])}</li>`);
+                    continue;
+                }
+
+                // Linha vazia
+                if (line.trim() === '') {
+                    closeList();
+                    continue;
+                }
+
+                // Parágrafo padrão
+                closeList();
+                out.push(`<p>${formatInline(line)}</p>`);
+            }
+
+            closeList();
+            return out.join('\n');
+        }
+
+        function formatInline(str) {
+            return str
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/(^|[^*])\*([^*]+)\*([^*]|$)/g, '$1<em>$2</em>$3');
         }
 
         function setLoadingState(isLoading) {
