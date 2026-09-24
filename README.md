@@ -1,5 +1,6 @@
 # 🏭 Positivo Vision MLOps: Inspeção Visual Automatizada, Otimização de Borda & Governança Enterprise
 
+[![Google Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-Live%20Demo%20Online-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)](https://positivo-vision-197215016090.us-central1.run.app/demo)
 [![DagsHub MLflow Cloud](https://img.shields.io/badge/MLflow-DagsHub%20Cloud-0072CE?style=for-the-badge&logo=mlflow&logoColor=white)](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow)
 [![Model Registry](https://img.shields.io/badge/Model%20Registry-@champion-success?style=for-the-badge&logo=pytorch)](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow/#/models/positivo-pcb-vision)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
@@ -13,9 +14,11 @@
 
 > **Sistema Industrial de MLOps, Visão Computacional & IA Generativa para Manufatura Eletrônica (Padrão Staff / Global Scale-up)**  
 > **Candidatura:** Positivo Tecnologia (POSI3) — Desenvolvedor de IA Sênior (Remoto / CLT).  
+> **🚀 Aplicação Online (Live Demo Cloud Run):** [https://positivo-vision-197215016090.us-central1.run.app/demo](https://positivo-vision-197215016090.us-central1.run.app/demo)  
+> **📑 Documentação Scalar Online:** [https://positivo-vision-197215016090.us-central1.run.app/docs](https://positivo-vision-197215016090.us-central1.run.app/docs)  
 > **MLflow na Nuvem:** [DagsHub Remote Tracking Server](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow)  
 > **Model Registry Oficial:** [Modelo `positivo-pcb-vision` (@champion)](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow/#/models/positivo-pcb-vision)  
-> **Deploy Multi-Cloud:** Google Cloud Run & Azure Container Apps (Serverless FinOps / Scale-to-Zero).
+> **Deploy Multi-Cloud:** Google Cloud Run (Ativo / Scale-to-Zero) & Azure Container Apps (`scripts/deploy_azure.sh`).
 
 ---
 
@@ -233,16 +236,16 @@ kubectl get hpa -n positivo-vision
 
 ## 🌐 6. Endpoints & Serviços Disponíveis
 
-| Serviço | Rota / URL | Descrição |
-| :--- | :--- | :--- |
-| **Live Demo Industrial** | `http://localhost:8000/demo` | Painel web com sorteio de amostras, toggle XAI, laudo LangGraph e DuckDB SQL. |
-| **Documentação Scalar** | `http://localhost:8000/docs` | Documentação interativa moderna da API REST. |
-| **Sorteio de Amostra** | `GET /api/v1/predict-random` | Sorteia PCB do pool, executa ONNX + Anomaly Head + Grad-CAM. |
-| **Laudo Técnico SMT** | `POST /api/v1/generate-report` | Executa o agente LangGraph sobre as normas IPC-A-610 Class 3. |
-| **Métricas SQL DuckDB** | `GET /api/v1/telemetry/sql-metrics` | Retorna o relatório Seis Sigma PPM e percentis de latência P99. |
-| **Feedback de Bancada** | `POST /api/v1/feedback` | Registra auditoria HITL com enfileiramento para retreino. |
-| **Probes Kubernetes** | `GET /healthz` e `GET /ready` | Sondas de liveness e readiness para orquestradores k8s. |
-| **DagsHub Cloud MLflow** | [DagsHub Remote MLflow](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow) | Painel na nuvem com tracking de runs e Model Registry oficial. |
+| Serviço | Rota / URL Online (Cloud Run) | Rota Local | Descrição |
+| :--- | :--- | :--- | :--- |
+| **Live Demo Industrial** | [Abrir Live Demo Online](https://positivo-vision-197215016090.us-central1.run.app/demo) | `http://localhost:8000/demo` | Painel web com sorteio de amostras, toggle XAI, laudo LangGraph e DuckDB SQL. |
+| **Documentação Scalar** | [Abrir Scalar Docs Online](https://positivo-vision-197215016090.us-central1.run.app/docs) | `http://localhost:8000/docs` | Documentação interativa moderna da API REST. |
+| **Sorteio de Amostra** | `/api/v1/predict-random` | `GET /api/v1/predict-random` | Sorteia PCB do pool, executa ONNX + Anomaly Head + Grad-CAM (< 20ms). |
+| **Laudo Técnico SMT** | `/api/v1/generate-report` | `POST /api/v1/generate-report` | Executa o agente LangGraph sobre as normas IPC-A-610 Class 3. |
+| **Métricas SQL DuckDB** | [Ver JSON Online](https://positivo-vision-197215016090.us-central1.run.app/api/v1/telemetry/sql-metrics) | `GET /api/v1/telemetry/sql-metrics` | Retorna o relatório Seis Sigma PPM e percentis de latência P99. |
+| **Feedback de Bancada** | `/api/v1/feedback` | `POST /api/v1/feedback` | Registra auditoria HITL com enfileiramento para retreino. |
+| **Probes Cloud / K8s** | `/ready` | `GET /ready` | Sondas de readiness para orquestradores k8s e Cloud Run. |
+| **DagsHub Cloud MLflow** | [DagsHub Remote MLflow](https://dagshub.com/henriquebotelhogomes/positivo-vision-mlops.mlflow) | `http://localhost:5000` | Painel na nuvem com tracking de runs e Model Registry oficial. |
 
 ---
 
