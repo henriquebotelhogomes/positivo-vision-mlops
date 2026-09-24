@@ -8,8 +8,8 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Instala curl para baixar uv ou copia o binário oficial do uv
-COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /bin/uv
+# Instala o binário oficial do uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # Copia arquivos de definição de pacotes
 COPY pyproject.toml uv.lock ./
