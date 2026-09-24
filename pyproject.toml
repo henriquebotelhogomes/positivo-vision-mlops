@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "positivo-vision-mlops"
-version = "0.1.0"
+version = "1.0.0"
 description = "Plataforma Industrial de Inspeção Visual de PCBs, Otimização de Borda & Governança de Modelos"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
