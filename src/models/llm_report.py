@@ -56,6 +56,45 @@ SMT_KNOWLEDGE_BASE: dict[str, dict[str, str]] = {
         ),
         "rma_risk": "Médio-Alto. Impede o contato elétrico entre as camadas interna e externa da PCB.",
     },
+    "DEFECT_MOUSEBITE": {
+        "title": "Mordedura de Trilha / Entalhe Crítico (Mouse Bite)",
+        "ipc_clause": "IPC-A-610G Seção 10.2.2 - Redução de Largura de Trilha Condutora",
+        "root_cause": (
+            "Erosão excessiva por retenção localizada de decapante químico ou destacamento de filme seco na exposição UV "
+            "durante a corrosão química da PCB."
+        ),
+        "corrective_action": (
+            "1. Ajustar o tempo de exposição UV no fotoplotter.\n"
+            "2. Inspecionar bicos aspersores de decapagem para evitar estagnação de produto químico.\n"
+            "3. Enviar para retrabalho fino com medição de condutância e selagem com verniz UV."
+        ),
+        "rma_risk": "Crítico. A redução de seção transversal causa efeito Joule, superaquecimento localizado e queima prematura.",
+    },
+    "DEFECT_SPUR": {
+        "title": "Esporão de Cobre / Rebarba Pontiaguda (Copper Spur)",
+        "ipc_clause": "IPC-A-610G Seção 10.2.4 - Esporões e Projeções Condutoras",
+        "root_cause": (
+            "Poeira na fotomáscara ou bolha de ar na laminação de filme fotossensível, gerando projeção condutora "
+            "que se projeta para fora da trilha."
+        ),
+        "corrective_action": (
+            "1. Limpeza de sala limpa (Cleanroom Classe 10.000) e substituição de roletes da laminadora.\n"
+            "2. Remover rebarba pontiaguda com micro-bisturi cirúrgico sob microscópio estéreo."
+        ),
+        "rma_risk": "Alto. Reduz a distância de isolação dielétrica (clearance), podendo abrir arco voltaico em alta tensão.",
+    },
+    "DEFECT_SPURIOUS_COPPER": {
+        "title": "Cobre Espúrio / Ilha Condutora Residual (Spurious Copper)",
+        "ipc_clause": "IPC-A-610G Seção 10.2.5 - Ilhas Condutoras Isoladas",
+        "root_cause": (
+            "Inadequada taxa de agitação ou esgotamento químico do banho de ataque ácido na linha de corrosão química."
+        ),
+        "corrective_action": (
+            "1. Drenar e reabastecer a solução química de cloreto cúprico e verificar bicos de corrosão.\n"
+            "2. Raspar o cobre residual com ferramenta abrasiva de precisão para evitar curtos."
+        ),
+        "rma_risk": "Médio. Pode se desprender durante o transporte ou sofrer migração eletroquímica sob umidade.",
+    },
     "DEFECT_SPURIOUS": {
         "title": "Cobre / Solda Espúria (Spurious Copper / Solder Splatter)",
         "ipc_clause": "IPC-A-610G Seção 5.2.7.1 - Esferas e Respingos de Solda",

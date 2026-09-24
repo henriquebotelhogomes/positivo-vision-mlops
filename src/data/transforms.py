@@ -18,12 +18,13 @@ IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
 def get_train_transforms(img_size: int = 224) -> transforms.Compose:
-    """Transformações com data augmentation para o ambiente de esteira industrial."""
+    """Transformações com data augmentation para o ambiente de esteira industrial (invariância multi-domínio)."""
     return transforms.Compose([
         transforms.Resize((img_size, img_size)),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomVerticalFlip(p=0.5),
-        transforms.ColorJitter(brightness=0.15, contrast=0.15),
+        transforms.RandomGrayscale(p=0.35),
+        transforms.ColorJitter(brightness=0.20, contrast=0.20, hue=0.08),
         transforms.ToTensor(),
         transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ])

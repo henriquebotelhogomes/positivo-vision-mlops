@@ -88,7 +88,9 @@ INDUSTRIAL_FOLDER_ORDER = [
     "defect_short",
     "defect_open",
     "defect_missing_hole",
-    "defect_spurious",
+    "defect_mousebite",
+    "defect_spur",
+    "defect_spurious_copper",
 ]
 
 
@@ -304,4 +306,4 @@ def run_training_pipeline(
 
 
 if __name__ == "__main__":
-    run_training_pipeline(epochs=10, batch_size=16, learning_rate=1e-3)
+    run_training_pipeline(epochs=10, batch_size=32, learning_rate=1e-3)

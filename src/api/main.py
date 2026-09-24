@@ -328,12 +328,16 @@ async def predict_random_sample(
 
     if cat_lower == "normal":
         candidate_dirs = [pool_dir / "normal"]
+    elif (pool_dir / cat_lower).exists() and (pool_dir / cat_lower).is_dir():
+        candidate_dirs = [pool_dir / cat_lower]
     elif cat_lower == "defect":
         candidate_dirs = [
             pool_dir / "defect_short",
             pool_dir / "defect_open",
             pool_dir / "defect_missing_hole",
-            pool_dir / "defect_spurious",
+            pool_dir / "defect_mousebite",
+            pool_dir / "defect_spur",
+            pool_dir / "defect_spurious_copper",
         ]
     elif cat_lower == "unknown":
         candidate_dirs = [pool_dir / "unknown"]
@@ -346,7 +350,9 @@ async def predict_random_sample(
                 pool_dir / "defect_short",
                 pool_dir / "defect_open",
                 pool_dir / "defect_missing_hole",
-                pool_dir / "defect_spurious",
+                pool_dir / "defect_mousebite",
+                pool_dir / "defect_spur",
+                pool_dir / "defect_spurious_copper",
                 pool_dir / "unknown",
             ]
 

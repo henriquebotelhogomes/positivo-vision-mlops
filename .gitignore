@@ -23,8 +23,11 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 data/deeppcb_raw/
+data/kaggle_raw/
+data/kaggle_patches/
 data/telemetry/*
 !data/telemetry/.gitkeep
+scratch/
 
 # IDEs & SO
 .vscode/

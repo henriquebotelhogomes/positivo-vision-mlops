@@ -11,7 +11,7 @@ from src.models.vision_net import build_model
 
 def test_vision_net_forward_and_embeddings():
     """Valida o forward pass e a extração do vetor de embedding de 960 dimensões."""
-    model = build_model(num_classes=5, pretrained=False)
+    model = build_model(num_classes=7, pretrained=False)
     model.eval()
 
     dummy_tensor = torch.randn(2, 3, 224, 224)
@@ -19,7 +19,7 @@ def test_vision_net_forward_and_embeddings():
         logits = model(dummy_tensor)
         embedding = model.extract_embedding(dummy_tensor)
 
-    assert logits.shape == (2, 5)
+    assert logits.shape == (2, 7)
     assert embedding.shape == (2, 960)
 
 
@@ -49,7 +49,7 @@ def test_anomaly_head_calibration_and_scoring():
 
 def test_gradcam_heatmap_generation():
     """Valida a geração da matriz de calor Grad-CAM e a sobreposição em imagem PIL."""
-    model = build_model(num_classes=5, pretrained=False)
+    model = build_model(num_classes=7, pretrained=False)
     gradcam = GradCAM(model=model, target_layer=model.get_last_conv_layer())
 
     dummy_tensor = torch.randn(1, 3, 224, 224)
