@@ -12,16 +12,22 @@ Executa o ciclo de vida completo:
 """
 
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import mlflow
+import mlflow.onnx
 import mlflow.pytorch
 import numpy as np
+import onnx
+import pandas as pd
 import structlog
 import torch
 import torch.nn as nn
+from mlflow.data.pandas_dataset import from_pandas
+from mlflow.models.signature import infer_signature
 from sklearn.metrics import (
     confusion_matrix,
     f1_score,
@@ -145,6 +151,50 @@ def run_training_pipeline(
     with mlflow.start_run(run_name="deeppcb_real_production") as run:
         run_id = run.info.run_id
         logger.info("Executando MLflow Run (DeepPCB Real)", run_id=run_id)
+
+        # Tags de Governança, Linhagem e Compliance Industrial
+        git_commit = "unknown"
+        git_branch = "unknown"
+        try:
+            git_commit = subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"], text=True
+            ).strip()
+            git_branch = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"], text=True
+            ).strip()
+        except Exception:
+            pass
+
+        mlflow.set_tags({
+            "standard": "IPC-A-610-Class-3",
+            "domain": "industrial-surface-mount-technology",
+            "hardware_target": "CPU (Intel/AMD SMT Line)",
+            "git.commit": git_commit,
+            "git.branch": git_branch,
+            "author": "Positivo MLOps Engineering Team",
+            "framework": "PyTorch + ONNX Runtime",
+        })
+
+        # Rastreamento de Datasets (MLflow Datasets Tab)
+        try:
+            train_df = pd.DataFrame({
+                "image_path": [str(s[0]) for s in train_dataset.samples],
+                "label": [train_dataset.classes[s[1]] for s in train_dataset.samples],
+            })
+            val_df = pd.DataFrame({
+                "image_path": [str(s[0]) for s in val_dataset.samples],
+                "label": [val_dataset.classes[s[1]] for s in val_dataset.samples],
+            })
+            train_input = from_pandas(
+                train_df, source=str(train_dir), name="deeppcb_train", targets="label"
+            )
+            val_input = from_pandas(
+                val_df, source=str(val_dir), name="deeppcb_val", targets="label"
+            )
+            mlflow.log_input(train_input, context="training")
+            mlflow.log_input(val_input, context="validation")
+        except Exception as exc:
+            logger.warning("Nao foi possivel logar dataset no MLflow", error=str(exc))
 
         # Log de Parâmetros
         mlflow.log_params({
@@ -273,13 +323,29 @@ def run_training_pipeline(
         mlflow.log_metrics(benchmark_results)
         logger.info("Benchmark de Latencia Concluido", **benchmark_results)
 
-        # 11. Registro do Modelo PyTorch no MLflow
+        # 11. Registro do Modelo PyTorch e ONNX no MLflow com Signatures
         dummy_sample = np.zeros((1, 3, 224, 224), dtype=np.float32)
+        with torch.no_grad():
+            dummy_output = model(torch.from_numpy(dummy_sample)).cpu().numpy()
+        signature = infer_signature(dummy_sample, dummy_output)
+
         mlflow.pytorch.log_model(
             model,
-            name="model",
+            artifact_path="model",
+            signature=signature,
             input_example=dummy_sample,
         )
+
+        try:
+            onnx_proto = onnx.load(str(quantized_onnx))
+            mlflow.onnx.log_model(
+                onnx_proto,
+                artifact_path="onnx_model",
+                signature=signature,
+                input_example=dummy_sample,
+            )
+        except Exception as exc:
+            logger.warning("Falha ao registrar modelo ONNX no MLflow", error=str(exc))
 
         # 12. Governança e Promoção Champion vs. Challenger
         promotion_result = evaluate_and_promote_model(
