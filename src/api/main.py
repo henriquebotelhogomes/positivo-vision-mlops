@@ -40,7 +40,6 @@ from src.core.logging import configure_logging, get_logger
 from src.data.transforms import check_out_of_distribution, get_inference_transforms
 from src.models.anomaly_head import OpenSetAnomalyDetector
 from src.models.gradcam import GradCAM
-from src.models.llm_report import generate_technical_report
 from src.models.vision_net import CLASS_NAMES, build_model
 from src.monitoring.telemetry import telemetry_manager
 
@@ -541,24 +540,26 @@ async def generate_report_endpoint(
     request: Request,
     payload: TechnicalReportRequest,
 ) -> TechnicalReportResponse:
-    """Gera o Laudo Técnico de Causa-Raiz SMT via OpenCode Go (DeepSeek V4.1 Flash)."""
+    """Gera o Laudo Técnico de Causa-Raiz SMT via LangGraph (StateGraph) & DeepSeek V4.1."""
     # Rate Limiting para rotas de LLM
     rate_limiter.check_report_limit(request)
 
-    report_data = await generate_technical_report(
+    from src.models.smt_graph_agent import SMTGraphAgent
+
+    graph_agent = SMTGraphAgent()
+    graph_res = graph_agent.generate_report(
+        inference_id=payload.inference_id,
         prediction=payload.prediction,
         confidence=payload.confidence,
-        inference_id=payload.inference_id,
-        latency_ms=payload.latency_ms,
         is_unknown_anomaly=payload.is_unknown_anomaly,
     )
 
     return TechnicalReportResponse(
         inference_id=payload.inference_id,
-        source=report_data["source"],
-        model=report_data["model"],
-        ipc_standard=report_data["ipc_standard"],
-        report_markdown=report_data["report_markdown"],
+        source="LangGraph SMT StateGraph",
+        model=graph_res["model_source"],
+        ipc_standard="IPC-A-610 Class 3",
+        report_markdown=graph_res["report_markdown"],
     )
 
 
@@ -611,6 +612,18 @@ async def get_recent_audits(limit: int = 50) -> AuditsResponse:
             stats=TelemetryStatsResponse(**telemetry_manager.get_default_stats()),
             records=[],
         )
+
+
+@app.get("/api/v1/telemetry/sql-metrics", tags=["Telemetry"])
+async def get_telemetry_sql_metrics() -> dict[str, Any]:
+    """Executa consultas analíticas ANSI SQL via DuckDB diretamente sobre o lago Parquet.
+
+    Calcula métricas industriais de PPM (Partes Por Milhão), percentis de latência e auditoria HITL.
+    """
+    from src.monitoring.sql_analytics import IndustrialSQLAnalytics
+
+    analytics = IndustrialSQLAnalytics()
+    return analytics.get_consolidated_sql_summary()
 
 
 @app.get("/api/v1/download-samples", tags=["Dataset"])

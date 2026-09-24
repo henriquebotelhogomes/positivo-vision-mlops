@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: positivo-vision-service
+  namespace: positivo-vision
+  labels:
+    app.kubernetes.io/name: positivo-vision-mlops
+spec:
+  type: ClusterIP
+  selector:
+    app: positivo-vision-mlops
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP

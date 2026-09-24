@@ -158,3 +158,18 @@ async def test_predict_random_with_category_normal():
         assert "sample_name" in data
         assert data["sample_name"].startswith("sample_normal")
 
+
+@pytest.mark.asyncio
+async def test_telemetry_sql_metrics_endpoint():
+    """Valida o endpoint de consultas SQL analíticas em DuckDB sobre Parquet."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/telemetry/sql-metrics")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["engine"] == "DuckDB ANSI SQL-on-Parquet"
+        assert "ppm_report" in data
+        assert "latency_sla" in data
+        assert "operator_hitl_audit" in data
+
+

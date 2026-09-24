@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: positivo-vision
+  labels:
+    environment: production
+    app.kubernetes.io/name: positivo-vision-mlops
+    app.kubernetes.io/part-of: smart-factory-smt
