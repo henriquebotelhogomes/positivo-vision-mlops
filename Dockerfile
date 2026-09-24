@@ -48,7 +48,6 @@ COPY --from=builder /app/.venv /app/.venv
 COPY --chown=appuser:appuser src/ /app/src/
 COPY --chown=appuser:appuser models/ /app/models/
 COPY --chown=appuser:appuser data/sample_pool/ /app/data/sample_pool/
-COPY --chown=appuser:appuser data/telemetry/ /app/data/telemetry/
 COPY --chown=appuser:appuser pyproject.toml /app/pyproject.toml
 
 # Cria pasta de telemetria com permissões para appuser (evita chown no .venv pesado)
